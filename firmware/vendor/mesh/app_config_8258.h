@@ -101,13 +101,13 @@ extern "C" {
 	#if GATT_RP_EN
 #define HCI_ACCESS		HCI_USE_UART
 	#else
-#define HCI_ACCESS		HCI_USE_NONE
+#define HCI_ACCESS		HCI_USE_UART
 	#endif
 #endif 
 
 #if (HCI_ACCESS==HCI_USE_UART)
-#define UART_TX_PIN		UART_TX_PD7
-#define UART_RX_PIN		UART_RX_PA0
+#define UART_TX_PIN		UART_TX_PD3 //UART_TX_PD7
+#define UART_RX_PIN		UART_RX_PD6 //UART_RX_PA0
 #endif
 #endif
 

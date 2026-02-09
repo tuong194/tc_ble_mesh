@@ -31,9 +31,15 @@
 #include "proj_lib/ble/ll/ll.h"
 #include "proj_lib/sig_mesh/app_mesh.h"
 
+#include "../RD/inc/bl0942.h"
+#include "../RD/inc/utils.h"
+
 extern void user_init();
 extern void main_loop ();
 void blc_pm_select_none();
+
+u8 rx_buff[16];
+
 
 #if (HCI_ACCESS==HCI_USE_UART)
 #include "proj/drivers/uart.h"
@@ -41,14 +47,35 @@ extern my_fifo_t hci_rx_fifo;
 
 u16 uart_tx_irq=0, uart_rx_irq=0;
 
+u8 data_buff = 0;
+u8 is_uart_rec = 0;
+
 _attribute_ram_code_ void irq_uart_handle()
 {
+
+//	static u8 uart_ndma_index = 0;
+//	static unsigned char uart_ndma_irqsrc;
+//	uart_ndma_irqsrc = uart_ndmairq_get();
+//	if(uart_ndma_irqsrc)
+//	{
+//		data_buff = reg_uart_data_buf(uart_ndma_index++);
+//		rd_buffer_put_data(data_buff);
+//		uart_ndma_index &= 0x03; is_uart_rec = 1;
+//	}
+
+
 	unsigned char irqS = reg_dma_rx_rdy0;
 	if(irqS & FLD_DMA_CHN_UART_RX)	//rx
 	{
 		uart_rx_irq++;
 		reg_dma_rx_rdy0 = FLD_DMA_CHN_UART_RX;
 		u8* w = hci_rx_fifo.p + (hci_rx_fifo.wptr & (hci_rx_fifo.num-1)) * hci_rx_fifo.size;
+
+		uart_data_t* pr = (uart_data_t *)w;
+		u8 len = pr->len;
+		for (int i = 0; i < len; i++) {
+			rd_buffer_put_data(pr->data[i]);
+		}
 		if(w[0]!=0)
 		{
 			my_fifo_next(&hci_rx_fifo);
@@ -221,15 +248,68 @@ _attribute_ram_code_ int main (void)    //must run in ramcode
 		LOG_USER_MSG_INFO(0, 0, "Start user init...");
 		#endif
 		user_init();
+
+		uart_gpio_set(GPIO_PD7,GPIO_PA0);
+		uart_reset();
+		uart_init_baudrate(9600,CLOCK_SYS_CLOCK_HZ,PARITY_NONE, STOP_BIT_ONE);
+
+		uart_dma_enable(1,1);
+		irq_enable_type(FLD_IRQ_DMA_EN);
+		dma_chn_irq_enable(FLD_DMA_CHN_UART_RX, 1);
+
+//		uart_dma_enable(0,0);
+//		uart_irq_enable(1,0);							// Enable interrupt receive
+//		uart_ndma_irq_triglevel(1,0); //
+
+		rd_buffer_init();
+		soft_uart_init(GPIO_PB4, 9600);
+		log_set_level(LOG_DEBUG);
+		sleep_ms(200);
+		LOGI("---hello, it's me---");
+		sleep_ms(200);
+
+		//bl0942_init();
 	}
 
     irq_enable();
+
+    uint32_t last_time = 0;
+
 
 	while (1) {
 #if (MODULE_WATCHDOG_ENABLE)
 		wd_clear(); //clear watch dog
 #endif
 		main_loop ();
+
+		if(clock_time_ms() - last_time >= 10000){
+			bl0942_read_data_unsigned(BL0942_REG_IRMS);
+			last_time = clock_time_ms();
+		}
+
+//		if(is_uart_rec == 1){
+//			LOGI("uart rec %02x", data_buff);
+//			is_uart_rec = 0;
+//		}
+
+//		wd_clear();
+
+//		uart_recbuff_init(rx_buff, 15, NULL);
+//		uart_dma_enable(1,0);
+//		sleep_ms(100);
+//
+//		u8 *data = rx_buff;
+//
+//			LOGI("uart rec %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+//					data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7],
+//					data[8], data[9], data[10], data[11], data[12], data[13], data[14]);
+//
+//		uart_dma_enable(0, 0);
+//		sleep_ms(500); wd_clear();
+//		sleep_ms(500); wd_clear();
+//		sleep_ms(500); wd_clear();
 	}
 }
 #endif
+
+

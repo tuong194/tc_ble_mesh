@@ -284,7 +284,10 @@ void uart_irq_enable(unsigned char rx_irq_en, unsigned char tx_irq_en)
  * @return    none
  */
 
-
+/*
+ * RX: rec RX_FIFO >= rx_level se nhay vao ngat
+ * TX: send TX_FIFO <= tx_level se nhay vao ngat
+ * */
 void uart_ndma_irq_triglevel(unsigned char rx_level, unsigned char tx_level)
 {
 	reg_uart_ctrl3 = rx_level | (tx_level<<4);
