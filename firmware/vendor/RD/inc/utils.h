@@ -61,11 +61,13 @@ void log_write(const char *format, ...);
 
 
 #define LOG_HEX_BUFF(buf, len)                         \
-do {                                                   \
-    for (int i = 0; i < (int)(len); i++) {              \
-    	log_write("%02X ", ((uint8_t *)(buf))[i]);          \
-    }                                                  \
-    log_write("\n");                                        \
+do { \
+	if (log_level >= LOG_VERBOSE) { 			\
+		for (int i = 0; i < (int)(len); i++) {              \
+			log_write("%02X ", ((uint8_t *)(buf))[i]);          \
+		}                                                  \
+		log_write("\n"); \
+	}\
 } while(0)
 
 
@@ -98,6 +100,16 @@ int rd_buffer_put_data(uint8_t data);
 int rd_buffer_get_data(uint8_t *data, uint16_t len);
 void rd_flush(void);
 uint16_t rd_buffer_get_size(void);
+
+
+/******************************* Dynamic Allocation **********************************/
+
+void heap_init(void);
+void rd_free(void *ptr);
+void *rd_malloc(uint32_t size);
+void *rd_calloc(uint32_t n, uint32_t size);
+void *rd_realloc(void *ptr, uint32_t new_size);
+
 
 
 #endif /* UTILS_H_ */

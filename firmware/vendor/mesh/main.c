@@ -33,6 +33,7 @@
 
 #include "../RD/inc/bl0942.h"
 #include "../RD/inc/utils.h"
+#include "../RD/inc/btn_mgmt.h"
 
 extern void user_init();
 extern void main_loop ();
@@ -47,20 +48,19 @@ extern my_fifo_t hci_rx_fifo;
 
 u16 uart_tx_irq=0, uart_rx_irq=0;
 
-u8 data_buff = 0;
-u8 is_uart_rec = 0;
 
 _attribute_ram_code_ void irq_uart_handle()
 {
 
 //	static u8 uart_ndma_index = 0;
+//	u8 data_buff = 0;
 //	static unsigned char uart_ndma_irqsrc;
 //	uart_ndma_irqsrc = uart_ndmairq_get();
 //	if(uart_ndma_irqsrc)
 //	{
 //		data_buff = reg_uart_data_buf(uart_ndma_index++);
 //		rd_buffer_put_data(data_buff);
-//		uart_ndma_index &= 0x03; is_uart_rec = 1;
+//		uart_ndma_index &= 0x03;
 //	}
 
 
@@ -73,6 +73,7 @@ _attribute_ram_code_ void irq_uart_handle()
 
 		uart_data_t* pr = (uart_data_t *)w;
 		u8 len = pr->len;
+
 		for (int i = 0; i < len; i++) {
 			rd_buffer_put_data(pr->data[i]);
 		}
@@ -251,7 +252,7 @@ _attribute_ram_code_ int main (void)    //must run in ramcode
 
 		uart_gpio_set(GPIO_PD7,GPIO_PA0);
 		uart_reset();
-		uart_init_baudrate(9600,CLOCK_SYS_CLOCK_HZ,PARITY_NONE, STOP_BIT_ONE);
+		uart_init_baudrate(4800,CLOCK_SYS_CLOCK_HZ,PARITY_NONE, STOP_BIT_ONE);
 
 		uart_dma_enable(1,1);
 		irq_enable_type(FLD_IRQ_DMA_EN);
@@ -262,16 +263,20 @@ _attribute_ram_code_ int main (void)    //must run in ramcode
 //		uart_ndma_irq_triglevel(1,0); //
 
 		rd_buffer_init();
-		soft_uart_init(GPIO_PB4, 9600);
-		log_set_level(LOG_DEBUG);
+		soft_uart_init(GPIO_PB4, 14400);
+		log_set_level(LOG_INFO);
 		sleep_ms(200);
 		LOGI("---hello, it's me---");
 		sleep_ms(200);
 
-		//bl0942_init();
+		button_gpio_config();
+
+
 	}
 
     irq_enable();
+
+    bl0942_init();
 
     uint32_t last_time = 0;
 
@@ -281,11 +286,36 @@ _attribute_ram_code_ int main (void)    //must run in ramcode
 		wd_clear(); //clear watch dog
 #endif
 		main_loop ();
-
-		if(clock_time_ms() - last_time >= 10000){
-			bl0942_read_data_unsigned(BL0942_REG_IRMS);
+		if(clock_time_ms() - last_time >= 10){
+			rd_button_cb();
 			last_time = clock_time_ms();
 		}
+
+//		if(clock_time_ms() - last_time >= 5000){
+//			uint32_t U_in = bl0942_read_data_unsigned(BL0942_REG_VRMS);
+//			uint32_t I_in = bl0942_read_data_unsigned(BL0942_REG_IRMS);
+//			s32 P_in = bl0942_read_data_signed(BL0942_REG_WATT);
+//
+//			float Uhd = (float)U_in * MULTIPLIER_U - 2.0f;
+//			float Ihd = (float)I_in * MULTIPLIER_I;
+//			float Phd = (float)P_in * MULTIPLIER_P;
+//
+//			if(Phd < 0) Phd = 0;
+//
+//			/* test */
+////			float Uhd = 123.6789;
+////			float Ihd = 568.6789;
+////			float Phd = 46.46554;
+//
+//			uint32_t U_log= Uhd * 1000;
+//			uint32_t I_log= Ihd * 1000;
+//			uint32_t P_log= Phd * 1000;
+//
+//
+//			LOGI("U_in: %d.%03d V, I_in: %d.%03d A, P_in: %d.%03d W\n", U_log/1000, U_log%1000, I_log/1000, I_log%1000, P_log/1000, P_log%1000);
+//
+//			last_time = clock_time_ms();
+//		}
 
 //		if(is_uart_rec == 1){
 //			LOGI("uart rec %02x", data_buff);

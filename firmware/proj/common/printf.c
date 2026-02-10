@@ -140,7 +140,7 @@ _PRINT_FUN_RAMCODE_ static int printi(char **out, int i, int b, int sg, int widt
 	return pc + prints(out, s, width, pad);
 }
 
-#define FLOAT_PRINT_EN		0
+#define FLOAT_PRINT_EN		0  //RD_NOTE enable print float
 
 #if FLOAT_PRINT_EN
 static inline void set_buff_with_check(char s[], int index, int len_max, char value)

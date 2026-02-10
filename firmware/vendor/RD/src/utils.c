@@ -6,17 +6,9 @@
  */
 
 #include "tl_common.h"
-#include "proj/mcu/watchdog_i.h"
-#include "vendor/common/user_config.h"
-#include "proj_lib/rf_drv.h"
-#include "proj_lib/pm.h"
-#include "proj_lib/ble/blt_config.h"
-#include "proj_lib/ble/ll/ll.h"
-#include "proj_lib/sig_mesh/app_mesh.h"
 
 #include "../inc/utils.h"
 
-#define TX_PIN_LOG GPIO_PD7
 
 typedef struct{
 	GPIO_PinTypeDef tx_pin;
@@ -153,13 +145,106 @@ int rd_buffer_get_data(uint8_t *data, uint16_t len){
 }
 
 uint16_t rd_buffer_get_size(void){
-	//LOGD("size: %d", rdRingBuf.fill_size);
+//	LOGV("size ring: %d", rdRingBuf.fill_size);
 	return rdRingBuf.fill_size;
 }
 
 
 
+/******************************* Dynamic Allocation **********************************/
 
+#define HEAP_SIZE 1024
+
+typedef struct block {
+    uint32_t size;
+    uint8_t  free;
+    struct block *next;
+} block_t;
+
+static uint8_t heap[HEAP_SIZE];
+static block_t *heap_head;
+
+
+void heap_init(void)
+{
+    heap_head = (block_t *)heap;
+    heap_head->size = HEAP_SIZE - sizeof(block_t);
+    heap_head->free = 1;
+    heap_head->next = NULL;
+}
+
+void *rd_malloc(uint32_t size)
+{
+    block_t *curr = heap_head;
+
+    while (curr) {
+        if (curr->free && curr->size >= size) {
+
+            if (curr->size > size + sizeof(block_t)) {
+                block_t *new_block = (block_t *)((uint8_t *)curr + sizeof(block_t) + size);
+                new_block->size = curr->size - size - sizeof(block_t);
+                new_block->free = 1;
+                new_block->next = curr->next;
+
+                curr->next = new_block;
+                curr->size = size;
+            }
+
+            curr->free = 0;
+            return (uint8_t *)curr + sizeof(block_t);
+        }
+        curr = curr->next;
+    }
+
+    return NULL;
+}
+
+void *rd_calloc(uint32_t n, uint32_t size)
+{
+    uint32_t total = n * size;
+    void *ptr = rd_malloc(total);
+    if (!ptr) return NULL;
+
+    memset(ptr, 0, total);
+    return ptr;
+}
+
+void *rd_realloc(void *ptr, uint32_t new_size)
+{
+    if (!ptr) return rd_malloc(new_size);
+
+    block_t *block = (block_t *)((uint8_t *)ptr - sizeof(block_t));
+
+    if (block->size >= new_size) {
+        return ptr;
+    }
+
+    void *new_ptr = rd_malloc(new_size);
+    if (!new_ptr) return NULL;
+
+    memcpy(new_ptr, ptr, block->size);
+    rd_free(ptr);
+
+    return new_ptr;
+}
+
+void rd_free(void *ptr)
+{
+    if (!ptr) return;
+
+    block_t *block = (block_t *)((uint8_t *)ptr - sizeof(block_t));
+    block->free = 1;
+
+    block_t *curr = heap_head;
+    while (curr && curr->next) {
+        if (curr->free && curr->next->free) {
+            curr->size += sizeof(block_t) + curr->next->size;
+            curr->next = curr->next->next;
+        } else {
+            curr = curr->next;
+        }
+    }
+}
 
 
 

@@ -10,12 +10,14 @@
 
 #include "proj/common/types.h"
 
-#define err_code_t s8
+#define err_code_t s16
 
 #define CODE_ERR -1
 #define CODE_OK   0
 
-
+#define ERR_INVALID_ARG 0x101
+#define ERR_CONFIG_GPIO 0x102
+#define ERR_SET_VALUE 0x103
 
 
 #endif /* RD_ERR_H_ */
