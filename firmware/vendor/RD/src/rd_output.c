@@ -36,7 +36,7 @@ err_code_t output_set_state(output_t *output, uint8_t state)
 {
     if (output->state == state)
     {
-    	LOGE("err set state");
+//    	LOGE("err set state");
         return CODE_ERR;
     }
     output->state = state;
@@ -57,9 +57,6 @@ void output_init_gpio(output_t *out){
 
 #define RELAY_INA_PIN  GPIO_PC0
 #define RELAY_INB_PIN  GPIO_PB7
-
-#define RELAY_INA      0
-#define RELAY_INB      1
 
 static output_t led[MAX_NUM_LED] = {
 		{
@@ -127,6 +124,7 @@ err_code_t relay_set_state(uint8_t state){
 		output_set_state(&relay[RELAY_INA], OFF_STATE);
 		output_set_state(&relay[RELAY_INB], OFF_STATE);
 	}
+	return CODE_OK;
 }
 uint8_t relay_get_state(void){
 	if(relay[RELAY_INA].state == relay[RELAY_INB].state)

@@ -17,6 +17,9 @@
 
 #define MAX_NUM_LED 2
 
+#define RELAY_INA      0
+#define RELAY_INB      1
+
 #define LED_ONOFF  1
 #define LED_SIGNAL 0
 

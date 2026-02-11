@@ -291,7 +291,7 @@ _attribute_ram_code_ int main (void)    //must run in ramcode
 			rd_button_cb();
 			last_time = clock_time_ms();
 		}
-
+		task_bl0942_read();
 
 //		if(clock_time_ms() - last_time >= 5000){
 //			uint32_t U_in = bl0942_read_data_unsigned(BL0942_REG_VRMS);

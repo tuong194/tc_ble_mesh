@@ -11,5 +11,6 @@
 //#include "btn_mgmt.h"
 
 void controller_init(void);
+void task_bl0942_read(void);
 
 #endif /* CONTROLLER_H_ */

@@ -19,7 +19,7 @@ static uint8_t reg_read = BL0942_REG_NONE;
 static inline void uart_send_data(uint8_t *data, uint8_t len)
 {
     //	while(len--){
-    ////		uart_send_byte(*(data++));
+    //		uart_send_byte(*(data++));
     //		uart_ndma_send_byte(*(data++));
     //	}
     uart_Send((unsigned char *)data, len);
@@ -211,7 +211,7 @@ s32 bl0942_read_data_signed(uint8_t REG)
     {
         value |= 0xFF000000;
     }
-    LOGI("[BL0942] REG : %02X, data: %02x %02x %02x, value (signed): %d", reg, data[0], data[1], data[2], value);
+    LOGD("[BL0942] data: %02x %02x %02x, value (signed): %d", data[0], data[1], data[2], value);
     return value;
 }
 
@@ -224,8 +224,7 @@ err_code_t bl0942_init(void)
         bl0942_send_setup(BL0942_REG_OT_FUNX, Set_CF_ZX);
         bl0942_send_setup(BL0942_REG_GAIN_CR, Set_Gain);
 
-        sleep_ms(250);
-        wd_clear();
+        sleep_ms(250); wd_clear();
 
         uint8_t gain_cr_read = (uint8_t)bl0942_read_data_unsigned(BL0942_REG_GAIN_CR);
         uint8_t ot_funx_read = (uint8_t)bl0942_read_data_unsigned(BL0942_REG_OT_FUNX);

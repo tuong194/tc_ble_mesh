@@ -109,15 +109,6 @@ static button_dev_t *button_create_com(uint8_t active_level, uint8_t (*hal_butto
     btn->next = g_head_handle;
     g_head_handle = btn;
 
-//    if(!g_button_timer_handle){
-//        esp_timer_create_args_t button_timer = {0};
-//        button_timer.arg = NULL;
-//        button_timer.callback = button_cb;
-//        button_timer.dispatch_method = ESP_TIMER_TASK;
-//        button_timer.name = "button_timer";
-//        esp_timer_create(&button_timer, &g_button_timer_handle);
-//        // esp_timer_start_periodic(g_button_timer_handle, TICK_INTERVAL * 1000U);
-//    }
     return btn;
 }
 

@@ -21,7 +21,7 @@ log_level_t log_level = LOG_NONE;
 void soft_uart_send_data(char* data);
 
 void log_write(const char *format, ...){
-    static char out[512];
+    static char out[256];
     char *p = out;
     va_list args;
     va_start(args, format);
