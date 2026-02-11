@@ -11,10 +11,10 @@
 
 static button_handle_t btn_handler[MAX_NUM_BUTTON];
 static void board_button_event_cb(void *arg, void *data);
+static event_post_cb_t btn_post_event_cb;
 
-err_code_t button_gpio_config(void){
+err_code_t btn_mgmt_gpio_config(void){
 	err_code_t ret = CODE_OK;
-	heap_init();
     const button_gpio_config_t button_gpio[MAX_NUM_BUTTON] = {
         {
             .gpio_num = BUTTON_GPIO_PIN,
@@ -44,36 +44,44 @@ err_code_t button_gpio_config(void){
 }
 
 static u8 btn_index_pair = 0xff;
+static btn_event_id_t evt_post = EVENT_BUTTON_MAX;
 static void board_button_event_cb(void *arg, void *data){
     button_handle_t btn_handler = (button_handle_t) arg;
-
     button_event_t event = button_get_event(btn_handler);
     switch (event)
     {
     case BUTTON_EVENT_PRESS:
-        LOGI("button press");
+        LOGD("button press");
+        evt_post = EVENT_BUTTON_PRESS; btn_post_event_cb(&evt_post, NULL);
         if(btn_index_pair == 1){
-        	LOGI("button delete all k9b");
+        	LOGD("button delete all k9b");
+            evt_post = EVENT_BUTTON_DELETE_ALL_K9B; btn_post_event_cb(&evt_post, NULL);
             btn_index_pair = 0xff;
         }
         break;
     case BUTTON_EVENT_LONG_PRESS:{
-    	LOGI("button is keeping");
+    	LOGD("button is keeping");
+        btn_index_pair = 1;
+        evt_post = EVENT_BUTTON_PAIR_K9B; btn_post_event_cb(&evt_post, NULL);
         break;
     }
     case BUTTON_EVENT_RELEASE_LONG_PRESS:{
-    	LOGI("button release keeping");
+    	LOGD("button release keeping");
         break;
     }
     case BUTTON_EVENT_LONG_LONG_PRESS:{
-    	LOGI("button is long keeping");
+    	LOGD("button is long keeping");
         break;
     }
     case BUTTON_EVENT_RELEASE_LONG_LONG_PRESS:
-    	LOGI("button release long keeping");
+    	LOGD("button release long keeping");
         break;
 
     default:
         break;
     }
+}
+
+void btn_mgmt_register_event_handle(event_post_cb_t cb){
+    if(cb) btn_post_event_cb = cb;
 }

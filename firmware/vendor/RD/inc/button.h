@@ -9,8 +9,8 @@
 #define BUTTON_H_
 
 
-#include "proj/common/types.h"
-#include "../inc/rd_err.h"
+#include "drivers/8258/gpio.h"
+#include "rd_err.h"
 
 typedef void *button_handle_t;
 typedef void (* button_cb_t)(void *button_handle, void *usr_data);

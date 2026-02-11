@@ -26,7 +26,18 @@
 #define BUTTON_ACTIVE_LEVEL ACTIVE_LOW
 #define BUTTON_GPIO_PIN     GPIO_PA1
 
-err_code_t button_gpio_config(void);
+typedef void (* event_post_cb_t)(void *event, void *usr_data);
+
+typedef enum {
+    EVENT_BUTTON_PRESS = 1,  // press key
+    EVENT_BUTTON_PAIR_K9B,   // pair CT2C 
+    EVENT_BUTTON_DELETE_ALL_K9B, // delete all CT2C with one button
+
+    EVENT_BUTTON_MAX
+} btn_event_id_t;
+
+err_code_t btn_mgmt_gpio_config(void);
+void btn_mgmt_register_event_handle(event_post_cb_t cb);
 
 
 #endif /* BTN_MGMT_H_ */

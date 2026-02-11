@@ -33,13 +33,12 @@
 
 #include "../RD/inc/bl0942.h"
 #include "../RD/inc/utils.h"
-#include "../RD/inc/btn_mgmt.h"
+#include "../RD/inc/button.h"
+#include "../RD/inc/controller.h"
 
 extern void user_init();
 extern void main_loop ();
 void blc_pm_select_none();
-
-u8 rx_buff[16];
 
 
 #if (HCI_ACCESS==HCI_USE_UART)
@@ -258,6 +257,8 @@ _attribute_ram_code_ int main (void)    //must run in ramcode
 		irq_enable_type(FLD_IRQ_DMA_EN);
 		dma_chn_irq_enable(FLD_DMA_CHN_UART_RX, 1);
 
+
+
 //		uart_dma_enable(0,0);
 //		uart_irq_enable(1,0);							// Enable interrupt receive
 //		uart_ndma_irq_triglevel(1,0); //
@@ -269,7 +270,7 @@ _attribute_ram_code_ int main (void)    //must run in ramcode
 		LOGI("---hello, it's me---");
 		sleep_ms(200);
 
-		button_gpio_config();
+		controller_init();
 
 
 	}
@@ -290,6 +291,7 @@ _attribute_ram_code_ int main (void)    //must run in ramcode
 			rd_button_cb();
 			last_time = clock_time_ms();
 		}
+
 
 //		if(clock_time_ms() - last_time >= 5000){
 //			uint32_t U_in = bl0942_read_data_unsigned(BL0942_REG_VRMS);
