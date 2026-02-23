@@ -140,7 +140,7 @@ static err_code_t bl0942_get_value(uint8_t value[3], uint8_t *raw_data, uint8_t 
             value[1] = raw_data[1];
             value[2] = raw_data[2];
             check_done = true;
-            LOGV("check ok nha, index: %d", i);
+            LOGV("check crc ok, index: %d", i);
             break;
         }
     }
@@ -188,7 +188,6 @@ uint32_t bl0942_read_data_unsigned(uint8_t REG)
 
 s32 bl0942_read_data_signed(uint8_t REG)
 {
-    uint8_t reg = 0;
     uint8_t data[3] = {0};
     uint8_t raw[8];
     s8 len = 0;

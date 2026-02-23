@@ -110,6 +110,8 @@ void *rd_malloc(uint32_t size);
 void *rd_calloc(uint32_t n, uint32_t size);
 void *rd_realloc(void *ptr, uint32_t new_size);
 
+/*************************** AES *********************************/
 
+unsigned char rd_aesRecheck(uint16_t unicast_ID, uint8_t compare_key[6]);
 
 #endif /* UTILS_H_ */

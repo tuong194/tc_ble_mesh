@@ -58,6 +58,14 @@ void output_init_gpio(output_t *out){
 #define RELAY_INA_PIN  GPIO_PC0
 #define RELAY_INB_PIN  GPIO_PB7
 
+struct blink_led_t{
+	u8 num_cycle;
+	u16 time_ms;
+	u32 last_time;
+};
+
+static blink_led_t blink_led;
+
 static output_t led[MAX_NUM_LED] = {
 		{
 			.gpio_pin = LED_SIGNAL_PIN,
@@ -87,8 +95,8 @@ static output_t relay[2] = {
 void led_init_gpio(void){
 	output_init_gpio(&led[0]);
 	output_init_gpio(&led[1]);
-	output_set_state(&led[0], ON_STATE);
-	output_set_state(&led[1], ON_STATE);
+//	output_set_state(&led[0], ON_STATE);
+//	output_set_state(&led[1], ON_STATE);
 }
 
 err_code_t led_set_state(uint8_t led_idx, uint8_t state){
@@ -108,8 +116,8 @@ uint8_t led_get_state(uint8_t led_idx){
 void relay_init_gpio(void){
 	output_init_gpio(&relay[0]);
 	output_init_gpio(&relay[1]);
-	output_set_state(&relay[0], OFF_STATE);
-	output_set_state(&relay[1], OFF_STATE);
+//	output_set_state(&relay[0], OFF_STATE);
+//	output_set_state(&relay[1], OFF_STATE);
 }
 
 err_code_t relay_set_state(uint8_t state){
@@ -131,6 +139,11 @@ uint8_t relay_get_state(void){
 		return OFF_STATE;
 	return ON_STATE;
 }
+
+void led_blink_scan(void){
+
+}
+
 
 
 

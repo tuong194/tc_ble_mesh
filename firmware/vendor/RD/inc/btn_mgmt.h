@@ -32,6 +32,7 @@ typedef enum {
     EVENT_BUTTON_PRESS = 1,  // press key
     EVENT_BUTTON_PAIR_K9B,   // pair CT2C 
     EVENT_BUTTON_DELETE_ALL_K9B, // delete all CT2C with one button
+    EVENT_BUTTON_KICK_OUT,
 
     EVENT_BUTTON_MAX
 } btn_event_id_t;

@@ -246,9 +246,34 @@ void rd_free(void *ptr)
     }
 }
 
+/*************************** AES *********************************/
 
+#include "../../../drivers/8258/aes.h"
+#include "../../../proj_lib/sig_mesh/app_mesh.h"
 
+unsigned char RD_key[16] = "Digital@28112804";
+unsigned char param_RD[8] = { 0x24, 0x02, 0x28, 0x04, 0x28, 0x11, 0x20, 0x20 }; // 8 byte selfgen by RD
+unsigned char aesEncrypt[16] = { 0 };
 
+unsigned char rd_aesRecheck(uint16_t unicast_ID, uint8_t compare_key[6]) {
+	unsigned char compare_buff[16] = { 0 };
+	for (uint8_t i = 0; i < 8; i++) {
+		compare_buff[i] = param_RD[i];
+	}
+	for (uint8_t i = 0; i < 6; i++) {
+		compare_buff[i + 8] = tbl_mac[i];
+	}
+	compare_buff[14] = unicast_ID & 0xFF;
+	compare_buff[15] = unicast_ID >> 8 & 0xFF;
+
+	aes_encrypt(RD_key, compare_buff, aesEncrypt);
+	for (uint8_t i = 0; i < 6; i++) {
+		if (aesEncrypt[10 + i] != compare_key[i]) { // ma hoa sai
+			return 0;
+		}
+	}
+	return 1;
+}
 
 
 

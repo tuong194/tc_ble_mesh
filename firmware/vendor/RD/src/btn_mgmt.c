@@ -52,17 +52,20 @@ static void board_button_event_cb(void *arg, void *data){
     {
     case BUTTON_EVENT_PRESS:
         LOGD("button press");
-        evt_post = EVENT_BUTTON_PRESS; btn_post_event_cb(&evt_post, NULL);
+        evt_post = EVENT_BUTTON_PRESS;
+        if(btn_post_event_cb) btn_post_event_cb(&evt_post, NULL);
         if(btn_index_pair == 1){
         	LOGD("button delete all k9b");
-            evt_post = EVENT_BUTTON_DELETE_ALL_K9B; btn_post_event_cb(&evt_post, NULL);
+            evt_post = EVENT_BUTTON_DELETE_ALL_K9B;
+            if(btn_post_event_cb) btn_post_event_cb(&evt_post, NULL);
             btn_index_pair = 0xff;
         }
         break;
     case BUTTON_EVENT_LONG_PRESS:{
     	LOGD("button is keeping");
         btn_index_pair = 1;
-        evt_post = EVENT_BUTTON_PAIR_K9B; btn_post_event_cb(&evt_post, NULL);
+        evt_post = EVENT_BUTTON_PAIR_K9B;
+        if(btn_post_event_cb) btn_post_event_cb(&evt_post, NULL);
         break;
     }
     case BUTTON_EVENT_RELEASE_LONG_PRESS:{
@@ -71,6 +74,8 @@ static void board_button_event_cb(void *arg, void *data){
     }
     case BUTTON_EVENT_LONG_LONG_PRESS:{
     	LOGD("button is long keeping");
+        evt_post = EVENT_BUTTON_KICK_OUT;
+        if(btn_post_event_cb) btn_post_event_cb(&evt_post, NULL);
         break;
     }
     case BUTTON_EVENT_RELEASE_LONG_LONG_PRESS:
