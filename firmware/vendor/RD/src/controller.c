@@ -12,9 +12,30 @@
 #include "../inc/utils.h"
 #include "../inc/bl0942.h"
 
-static void button_event_handle(void *event, void *usr_data);
+struct {
+	uint32_t U;
+	uint32_t I;
+	uint32_t P;
+	uint32_t P_Consume;
+}electrical_param;
+
+static void button_event_handle(void* event, void* usr_data);
+struct electrical_param ePar;
+static uint32_t P_threshold = 0;
+static uint32_t I_threshold = 0;
 
 static uint8_t dev_state = OFF_STATE;
+
+uint32_t aptomat_get_voltage(void) { return ePar.U; }
+uint32_t aptomat_get_current(void) { return ePar.I; }
+uint32_t aptomat_get_power(void) { return ePar.P; }
+uint32_t aptomat_get_power_consume(void) { return ePar.P_Consume; }
+void dev_set_threshold_power(uint32_t thres_val) {
+	P_threshold = thres_val;
+}
+void dev_set_threshold_current(uint32_t thres_val) {
+	I_threshold = thres_val;
+}
 
 void controller_init(void) {
 	heap_init();
@@ -32,8 +53,8 @@ void controller_init(void) {
 }
 
 
-static void button_event_handle(void *event, void *usr_data) {
-	btn_event_id_t event_id = *(btn_event_id_t *) (event);
+static void button_event_handle(void* event, void* usr_data) {
+	btn_event_id_t event_id = *(btn_event_id_t*)(event);
 
 	switch (event_id) {
 	case EVENT_BUTTON_PRESS:
@@ -53,40 +74,40 @@ static void button_event_handle(void *event, void *usr_data) {
 	}
 }
 
-void dev_set_state(uint8_t onoff){
-	if(dev_state == onoff) return;
+void dev_set_state(uint8_t onoff) {
+	if (dev_state == onoff) return;
 	dev_state = onoff;
 	led_set_state(LED_ONOFF, dev_state);
 	relay_set_state(dev_state);
 }
 
-uint8_t dev_get_state(void){
+uint8_t dev_get_state(void) {
 	return dev_state;
 }
 
 void task_bl0942_read(void) {
 	static u32 last_time_read = 0;
-	if (clock_time_ms() - last_time_read >= 5000) {
+	static P_Consume_ws = 0;
+	if (clock_time_ms() - last_time_read >= TIME_CYCLE_READ_MS) {
 		uint32_t U_in = bl0942_read_data_unsigned(BL0942_REG_VRMS);
 		uint32_t I_in = bl0942_read_data_unsigned(BL0942_REG_IRMS);
 		s32 P_in = bl0942_read_data_signed(BL0942_REG_WATT);
 
-		float Uhd = (float) U_in * MULTIPLIER_U; if(Uhd > 2.0f) Uhd = Uhd - 2.0f;
-		float Ihd = (float) I_in * MULTIPLIER_I;
-		float Phd = (float) P_in * MULTIPLIER_P;
+		float Uhd = (float)U_in * MULTIPLIER_U; if (Uhd > 2.0f) Uhd = Uhd - 2.0f;
+		float Ihd = (float)I_in * MULTIPLIER_I;
+		float Phd = (float)P_in * MULTIPLIER_P;
 
 		if (Phd < 0) Phd = 0;
 
-		/* test */
-		//			float Uhd = 123.6789;
-		//			float Ihd = 568.6789;
-		//			float Phd = 46.46554;
+		ePar.U = Uhd * 100;
+		ePar.I = Ihd * 100;
+		ePar.P = Phd * 100;
 
-		uint32_t U_log = Uhd * 1000;
-		uint32_t I_log = Ihd * 1000;
-		uint32_t P_log = Phd * 1000;
+		P_Consume_ws += ePar.P * (TIME_CYCLE_READ_MS / 1000);
+		ePar.P_Consume = P_Consume_ws / 3600;
 
-		LOGI("U_in: %d.%03d V, I_in: %d.%03d A, P_in: %d.%03d W\n", U_log/1000, U_log%1000, I_log/1000, I_log%1000, P_log/1000, P_log%1000);
+		LOGI("U_in: %d.%02d V, I_in: %d.%02d A, P_in: %d.%02d W\n", ePar.U / 100, ePar.U % 100, ePar.I / 100, ePar.I % 100, ePar.P / 100, ePar.P % 100);
+
 
 		last_time_read = clock_time_ms();
 	}
