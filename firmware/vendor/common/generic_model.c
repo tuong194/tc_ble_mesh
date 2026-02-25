@@ -53,6 +53,8 @@
   * @{
   */
 
+#include "../RD/inc/controller.h"
+
 
 /** @defgroup General_Model
   * @brief General Models Code.
@@ -281,6 +283,7 @@ int g_onoff_set(mesh_cmd_g_onoff_set_t *p_set, int par_len, int force_last, int 
 		int len_tmp = GET_LEVEL_PAR_LEN(par_len >= sizeof(mesh_cmd_g_onoff_set_t));
 		err = g_level_set((u8 *)&level_set_tmp, len_tmp, G_LEVEL_SET_NOACK, idx, retransaction, st_trans_type, 0, pub_list);
         if(!err){
+        	dev_set_state(p_set->onoff); //RD_EDIT dev set state onoff
 		    set_on_power_up_onoff(idx, st_trans_type, p_set->onoff);
 		    #if 0 // PTS_TEST_MMDL_SR_LLC_BV_08_C
 			light_res_sw_save[idx].lc_onoff_target = p_set->onoff; // need to place another generic onoff model at the third element which only include LC models.

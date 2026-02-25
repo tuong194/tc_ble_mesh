@@ -18,6 +18,7 @@
 #define ERR_INVALID_ARG 0x101
 #define ERR_CONFIG_GPIO 0x102
 #define ERR_SET_VALUE 0x103
+#define ERR_DETECT_ELECTRICAL 0x104
 
 
 #endif /* RD_ERR_H_ */

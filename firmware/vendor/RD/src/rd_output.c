@@ -58,11 +58,11 @@ void output_init_gpio(output_t *out){
 #define RELAY_INA_PIN  GPIO_PC0
 #define RELAY_INB_PIN  GPIO_PB7
 
-struct blink_led_t{
+typedef struct {
 	u8 num_cycle;
 	u16 time_ms;
 	u32 last_time;
-};
+}blink_led_t;
 
 static blink_led_t blink_led;
 
@@ -143,6 +143,10 @@ uint8_t relay_get_state(void){
 void led_blink_scan(void){
 
 }
+
+
+
+
 
 
 

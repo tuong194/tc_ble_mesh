@@ -596,7 +596,7 @@ extern "C" {
 #define LIGHT_TYPE_SEL				LIGHT_TYPE_PANEL
 		#endif
 	#else
-#define LIGHT_TYPE_SEL				LIGHT_TYPE_CT	// 
+#define LIGHT_TYPE_SEL				LIGHT_TYPE_PANEL	// RD_EDIT edit light type
 	#endif
 #endif
 #endif

@@ -263,22 +263,20 @@ _attribute_ram_code_ int main (void)    //must run in ramcode
 //		uart_irq_enable(1,0);							// Enable interrupt receive
 //		uart_ndma_irq_triglevel(1,0); //
 
+		// init log debug
 		rd_buffer_init();
 		soft_uart_init(GPIO_PB4, 14400);
-		log_set_level(LOG_INFO);
+		log_set_level(LOG_DEBUG);
 		sleep_ms(200);
 		LOGI("---hello, it's me---");
 		sleep_ms(200);
-
-		controller_init();
-
 
 	}
 
     irq_enable();
 
+    controller_init();
     bl0942_init();
-
     uint32_t last_time = 0;
 
 
@@ -291,55 +289,8 @@ _attribute_ram_code_ int main (void)    //must run in ramcode
 			rd_button_cb();
 			last_time = clock_time_ms();
 		}
-		task_bl0942_read();
+		task_bl0942();
 
-//		if(clock_time_ms() - last_time >= 5000){
-//			uint32_t U_in = bl0942_read_data_unsigned(BL0942_REG_VRMS);
-//			uint32_t I_in = bl0942_read_data_unsigned(BL0942_REG_IRMS);
-//			s32 P_in = bl0942_read_data_signed(BL0942_REG_WATT);
-//
-//			float Uhd = (float)U_in * MULTIPLIER_U - 2.0f;
-//			float Ihd = (float)I_in * MULTIPLIER_I;
-//			float Phd = (float)P_in * MULTIPLIER_P;
-//
-//			if(Phd < 0) Phd = 0;
-//
-//			/* test */
-////			float Uhd = 123.6789;
-////			float Ihd = 568.6789;
-////			float Phd = 46.46554;
-//
-//			uint32_t U_log= Uhd * 1000;
-//			uint32_t I_log= Ihd * 1000;
-//			uint32_t P_log= Phd * 1000;
-//
-//
-//			LOGI("U_in: %d.%03d V, I_in: %d.%03d A, P_in: %d.%03d W\n", U_log/1000, U_log%1000, I_log/1000, I_log%1000, P_log/1000, P_log%1000);
-//
-//			last_time = clock_time_ms();
-//		}
-
-//		if(is_uart_rec == 1){
-//			LOGI("uart rec %02x", data_buff);
-//			is_uart_rec = 0;
-//		}
-
-//		wd_clear();
-
-//		uart_recbuff_init(rx_buff, 15, NULL);
-//		uart_dma_enable(1,0);
-//		sleep_ms(100);
-//
-//		u8 *data = rx_buff;
-//
-//			LOGI("uart rec %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
-//					data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7],
-//					data[8], data[9], data[10], data[11], data[12], data[13], data[14]);
-//
-//		uart_dma_enable(0, 0);
-//		sleep_ms(500); wd_clear();
-//		sleep_ms(500); wd_clear();
-//		sleep_ms(500); wd_clear();
 	}
 }
 #endif

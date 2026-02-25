@@ -6,8 +6,8 @@
  */
 
 
- #include "k9b.h"
- #include "utils.h"
+ #include "../inc/k9b.h"
+ #include "../inc/utils.h"
 
  #define NUM_ELEMENT 1
  #define FLASH_HEADER_1 0x55
@@ -70,7 +70,7 @@ static void k9b_init_flash_onoff(void)
 	{
 		k9b_init_flash_onoff_df();
 	}
-	ESP_LOGI("K9B MANAGER", "init flash K9B onoff");
+	//ESP_LOGI("K9B MANAGER", "init flash K9B onoff");
 	for (size_t i = 0; i < NUM_ELEMENT; i++)
 	{
 		printf("K9B: button index %d\n", i);

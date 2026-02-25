@@ -84,7 +84,7 @@ err_code_t bl0942_send_read_cmd(uint8_t REG)
     tx_data[4] = 0x00;
     tx_data[5] = CRC_Check;
 
-    LOGD("READ REG: %02x", REG);
+//    LOGD("READ REG: %02x", REG);
     uart_send_data(tx_data, 6);
     return CODE_OK;
 }
@@ -113,7 +113,7 @@ static s16 bl0942_get_raw_data(uint8_t *raw_data, uint16_t len)
     rd_flush();
 
     LOGV("raw data:");
-    LOG_HEX_BUFF(raw_data, len_real);
+//    LOG_HEX_BUFF(raw_data, len_real);
     return len_real;
 }
 
@@ -182,7 +182,7 @@ uint32_t bl0942_read_data_unsigned(uint8_t REG)
         return 0;
     }
     uint32_t value = ((uint32_t)data[2] << 16) | ((uint32_t)data[1] << 8) | data[0];
-    LOGI("[BL0942] data: %02x %02x %02x, value (unsigned): %d", data[0], data[1], data[2], value);
+//    LOGD("[BL0942] data: %02x %02x %02x, value (unsigned): %d", data[0], data[1], data[2], value);
     return value;
 }
 
@@ -210,7 +210,7 @@ s32 bl0942_read_data_signed(uint8_t REG)
     {
         value |= 0xFF000000;
     }
-    LOGD("[BL0942] data: %02x %02x %02x, value (signed): %d", data[0], data[1], data[2], value);
+//    LOGD("[BL0942] data: %02x %02x %02x, value (signed): %d", data[0], data[1], data[2], value);
     return value;
 }
 

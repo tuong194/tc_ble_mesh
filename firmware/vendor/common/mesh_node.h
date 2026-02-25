@@ -804,7 +804,7 @@ typedef struct{
 	#elif (__PROJECT_SPIRIT_LPN__)
 #define LIGHT_CNT                       (1)
 	#else
-#define LIGHT_CNT                       (3)     // means instance count
+#define LIGHT_CNT                       (1)     // means instance count //RD_EDIT edit light cnt
 	#endif
 #elif (LIGHT_TYPE_SEL == LIGHT_TYPE_NLC_CTRL_CLIENT)
 #define LIGHT_CNT                       (4)     // means instance count

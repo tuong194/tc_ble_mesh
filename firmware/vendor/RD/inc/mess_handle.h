@@ -20,7 +20,7 @@
 #define RD_HEADER_SAVE_GATEWAY      0x0002
 #define RD_HEADER_AES_AND_GET_TYPE  0x0003
 
-#define RD_HEADER_GET_PARAM         0x1752
+#define RD_HEADER_GET_PARAM               0x1752
 #define RD_HEADER_SET_THRESHOLD_CURRENT   0x0417
 #define RD_HEADER_SET_THRESHOLD_POWER     0x0517
 #define RD_HEADER_COUNTDOWN               0x070B
@@ -36,5 +36,7 @@ typedef enum {
 
 int RD_mess_handle_opcode_E0(u8* par, int par_len, mesh_cb_fun_par_t* cb_par);
 int RD_mess_handle_opcode_E2(u8* par, int par_len, mesh_cb_fun_par_t* cb_par);
+
+int dev_rsp_param_to_gw(type_get_para type);
 
 #endif /* MESS_HANDLE_H_ */

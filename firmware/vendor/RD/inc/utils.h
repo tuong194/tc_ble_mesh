@@ -62,7 +62,7 @@ void log_write(const char *format, ...);
 
 #define LOG_HEX_BUFF(buf, len)                         \
 do { \
-	if (log_level >= LOG_VERBOSE) { 			\
+	if (log_level >= LOG_DEBUG) { 			\
 		for (int i = 0; i < (int)(len); i++) {              \
 			log_write("%02X ", ((uint8_t *)(buf))[i]);          \
 		}                                                  \
