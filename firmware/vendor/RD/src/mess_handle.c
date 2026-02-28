@@ -22,6 +22,7 @@ static int rd_handle_get_param(uint8_t *par);
 static int rd_handle_set_threshold_power(uint8_t *par);
 static int rd_handle_set_threshold_current(uint8_t *par);
 static int rd_handle_set_countdown(uint8_t *par);
+static int rd_handle_set_time_and_num_detect(uint8_t *par);
 
 
 int RD_mess_handle_opcode_E0(u8 *par, int par_len, mesh_cb_fun_par_t *cb_par)
@@ -35,7 +36,7 @@ int RD_mess_handle_opcode_E0(u8 *par, int par_len, mesh_cb_fun_par_t *cb_par)
         break;
     case RD_HEADER_AES_AND_GET_TYPE:
         LOGD("[E0] check secure");
-        rd_handle_check_secure_and_get_type(par, cb_par->adr_src);
+        rd_handle_check_secure_and_get_type(par, cb_par->adr_dst);
         break;
     default:
         LOGE("unknown header %04x, opcode E0", header);
@@ -47,21 +48,26 @@ int RD_mess_handle_opcode_E0(u8 *par, int par_len, mesh_cb_fun_par_t *cb_par)
 int RD_mess_handle_opcode_E2(u8 *par, int par_len, mesh_cb_fun_par_t *cb_par)
 {
     int ret = 0;
+//    LOGI("opcode E2: src addr: 0x%04x, dst_addr: 0x%04x", cb_par->adr_src, cb_par->adr_dst);
 //    LOG_HEX_BUFF(par, 6);
     uint16_t header = par[1] << 8 | par[0];
     switch (header)
     {
     case RD_HEADER_GET_PARAM:
     	ret = rd_handle_get_param(par);
+    	break;
     case RD_HEADER_SET_THRESHOLD_CURRENT:
-        ret = rd_handle_set_threshold_power(par);
+        ret = rd_handle_set_threshold_current(par);
         break;
     case RD_HEADER_SET_THRESHOLD_POWER:
-        ret = rd_handle_set_threshold_current(par);
+        ret = rd_handle_set_threshold_power(par);
         break;
     case RD_HEADER_COUNTDOWN:
         ret = rd_handle_set_countdown(par);
         break;
+    case RD_HEADER_SET_TIME_AND_NUM_DETECT:
+    	ret = rd_handle_set_time_and_num_detect(par);
+    	break;
 
     default:
         LOGE("unknown header %04x, opcode E2", header);
@@ -73,9 +79,9 @@ int RD_mess_handle_opcode_E2(u8 *par, int par_len, mesh_cb_fun_par_t *cb_par)
 static int rd_handle_save_gw(uint8_t *par, uint8_t src_adr)
 {
     uint8_t rsp_buf[8];
-    if (par[0] || par[1])
+    if (par[2] || par[3])
     {
-        GATEWAY_ADDR = par[1] << 8 | par[0];
+        GATEWAY_ADDR = par[3] << 8 | par[2];
     }
     else
     {
@@ -91,7 +97,7 @@ static int rd_handle_save_gw(uint8_t *par, uint8_t src_adr)
     rsp_buf[5] = PROVIDER_SUB;
     rsp_buf[6] = 0;
     rsp_buf[7] = 0;
-    return mesh_tx_cmd2normal_primary(RD_OPCODE_RSP_SCAN_DEV, rsp_buf, 8, src_adr, 0);
+    return mesh_tx_cmd2normal_primary(RD_OPCODE_RSP_SCAN_DEV, rsp_buf, 8, GATEWAY_ADDR, 0);
 }
 
 static int rd_handle_check_secure_and_get_type(uint8_t *par, uint8_t src_adr)
@@ -101,7 +107,7 @@ static int rd_handle_check_secure_and_get_type(uint8_t *par, uint8_t src_adr)
         uint8_t rsp_buf[8];
         if (rd_aesRecheck(src_adr, &par[2]))
         {
-            LOGD("encrypt DONE !");
+            LOGD("encrypt DONE !!!");
             rsp_buf[0] = RD_HEADER_AES_AND_GET_TYPE & 0xff;
             rsp_buf[1] = (RD_HEADER_AES_AND_GET_TYPE >> 8) & 0xff;
             rsp_buf[2] = MAINTYPE;
@@ -123,7 +129,7 @@ static int rd_handle_check_secure_and_get_type(uint8_t *par, uint8_t src_adr)
             rsp_buf[6] = 0xff;
             rsp_buf[7] = 0xfe;
         }
-        return mesh_tx_cmd2normal_primary(RD_OPCODE_RSP_SCAN_DEV, rsp_buf, 8, src_adr, 0);
+        return mesh_tx_cmd2normal_primary(RD_OPCODE_RSP_SCAN_DEV, rsp_buf, 8, GATEWAY_ADDR, 0);
     }
     return -1;
 }
@@ -132,7 +138,7 @@ static int rd_handle_set_threshold_power(uint8_t *par)
 {
     uint8_t rsp_buf[8];
     uint32_t threshold = ((par[2] << 8) | par[3]) * 100 + ((par[4] << 8) | par[5]);
-    LOGI("set threshold power: %u W", threshold);
+    LOGI("set threshold power: %u/100 W", threshold);
     dev_set_threshold_power(threshold);
 
     rsp_buf[0] = RD_HEADER_SET_THRESHOLD_POWER & 0xff;
@@ -149,7 +155,7 @@ static int rd_handle_set_threshold_current(uint8_t *par)
 {
     uint8_t rsp_buf[8];
     uint32_t threshold = ((par[2] << 8) | par[3]) * 100 + ((par[4] << 8) | par[5]);
-    LOGI("set threshold curent: %u A", threshold);
+    LOGI("set threshold current: %u/100 A", threshold);
     dev_set_threshold_current(threshold);
 
     rsp_buf[0] = RD_HEADER_SET_THRESHOLD_CURRENT & 0xff;
@@ -183,6 +189,18 @@ static int rd_handle_get_param(uint8_t *par){
 	return 0;
 }
 
+static int rd_handle_set_time_and_num_detect(uint8_t *par){
+	LOGD("set time cycle read param and detect error");
+	uint8_t rsp_buf[8];
+	uint32_t time_ms = (par[2] << 24) | (par[3] << 16) + (par[4] << 8) | par[5];
+	LOGD("set time cycle: %u ms, num: detect_I: %d, detect_P: %d", time_ms, par[6], par[7]);
+	dev_set_time_cycle_read_param_electrical(time_ms);
+	dev_set_max_num_detect_err_current(par[6]);
+	dev_set_max_num_detect_err_power(par[7]);
+	memcpy(rsp_buf, par, 8);
+	return mesh_tx_cmd2normal_primary(RD_OPCODE_RSP_PRODUCT_FEATURE, rsp_buf, 8, GATEWAY_ADDR, 0);
+}
+
 
 int dev_rsp_param_to_gw(type_get_para type)
 {
@@ -206,15 +224,13 @@ int dev_rsp_param_to_gw(type_get_para type)
     default:
         break;
     }
-    uint16_t integer_part = value / 100;
-    uint16_t decimal_part = value % 100;
-    rsp_buf[0] = RD_HEADER_GET_PARAM & 0xff;
-    rsp_buf[1] = (RD_HEADER_GET_PARAM >> 8) & 0xff;
-    rsp_buf[2] = (uint8_t)type;
-    rsp_buf[3] = (integer_part >> 8) & 0xff;
-    rsp_buf[4] = integer_part & 0xff;
-    rsp_buf[5] = (decimal_part >> 8) & 0xff;
-    rsp_buf[6] = decimal_part & 0xff;
 
-    return mesh_tx_cmd2normal_primary(RD_OPCODE_RSP_PRODUCT_FEATURE, rsp_buf, 8, GATEWAY_ADDR, 0);
+    rsp_buf[0] = 0x17;
+    rsp_buf[1] = (uint8_t)type;
+    rsp_buf[2] = (value >> 24) & 0xff;
+    rsp_buf[3] = (value >> 16) & 0xff;
+    rsp_buf[4] = (value >> 8) & 0xff;
+    rsp_buf[5] = value & 0xff;
+
+    return mesh_tx_cmd2normal_primary(RD_OPCODE_REPORT_PARAM_ELECTRICAL, rsp_buf, 6, GATEWAY_ADDR, 0);
 }

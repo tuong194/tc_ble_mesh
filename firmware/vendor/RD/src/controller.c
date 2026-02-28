@@ -17,8 +17,6 @@
 #define BIT_CHECK_ERROR_POWER     (1<<0)
 #define BIT_CHECK_ERROR_CURRENT   (1<<1)
 
-#define MAX_CYCLE_DETECT_ERROR     5
-
 struct electrical_param{
 	uint32_t U;
 	uint32_t I;
@@ -32,6 +30,11 @@ static uint32_t P_threshold = 0;
 static uint32_t I_threshold = 0;
 static uint8_t dev_state = OFF_STATE;
 
+static uint32_t TIME_CYCLE_READ_MS = 10000;
+static uint8_t MAX_CYCLE_DETECT_ERROR_I = 5;
+static uint8_t MAX_CYCLE_DETECT_ERROR_P = 5;
+
+
 static void aptomat_read_electrical_param(void);
 static err_code_t aptomat_check_error(uint32_t I_in, uint32_t P_in);
 static void button_event_handle(void* event, void* usr_data);
@@ -40,6 +43,19 @@ uint32_t aptomat_get_voltage(void) { return ePar.U; }
 uint32_t aptomat_get_current(void) { return ePar.I; }
 uint32_t aptomat_get_power(void) { return ePar.P; }
 uint32_t aptomat_get_power_consume(void) { return ePar.P_Consume; }
+
+void dev_set_time_cycle_read_param_electrical(uint32_t time_ms){
+	TIME_CYCLE_READ_MS = time_ms;
+}
+
+void dev_set_max_num_detect_err_current(uint8_t num){
+	MAX_CYCLE_DETECT_ERROR_I = num;
+}
+
+void dev_set_max_num_detect_err_power(uint8_t num){
+	MAX_CYCLE_DETECT_ERROR_P = num;
+}
+
 void dev_set_threshold_power(uint32_t thres_val) {
 	P_threshold = thres_val;
 }
@@ -137,7 +153,7 @@ static void aptomat_read_electrical_param(void){
 	P_Consume_ws += ePar.P * (TIME_CYCLE_READ_MS / 1000); // Ws
 	ePar.P_Consume = P_Consume_ws / 3600; //kWh
 
-	LOGI("U_in: %d.%d V, I_in: %d.%d A, P_in: %d.%d W",\
+	LOGI("U_in: %d.%02d V, I_in: %d.%02d A, P_in: %d.%02d W",\
 		ePar.U / 100, ePar.U % 100, ePar.I / 100, ePar.I % 100, ePar.P / 100, ePar.P % 100);
 
 }
@@ -146,41 +162,46 @@ static err_code_t aptomat_check_error(uint32_t I_in, uint32_t P_in){
 	static uint8_t flag_check_err = 0;
 	static s8 count_check_err_current = 0;
 	static s8 count_check_err_power = 0;
-	if(I_in > I_threshold){
-		count_check_err_current++;
-		LOGD("current too high, count: %d", count_check_err_current);
-		if(count_check_err_current >= MAX_CYCLE_DETECT_ERROR){
-			count_check_err_current = MAX_CYCLE_DETECT_ERROR;
-			flag_check_err |= BIT_CHECK_ERROR_CURRENT;
-		}
-	}else{
-		if(count_check_err_current > 1) count_check_err_current--;
-		if(count_check_err_current == 0){
-			flag_check_err &= ~BIT_CHECK_ERROR_CURRENT;
-			LOGI("current is safety");
+	if(I_threshold > 0){
+		if(I_in > I_threshold){
+			count_check_err_current++;
+			LOGD("current too high, count: %d", count_check_err_current);
+			if(count_check_err_current >= MAX_CYCLE_DETECT_ERROR_I){
+				count_check_err_current = MAX_CYCLE_DETECT_ERROR_I;
+				flag_check_err |= BIT_CHECK_ERROR_CURRENT;
+			}
+		}else{
+			if(count_check_err_current > 1) count_check_err_current--;
+			if(count_check_err_current == 0){
+				flag_check_err &= ~BIT_CHECK_ERROR_CURRENT;
+				LOGI("current is safety");
+			}
 		}
 	}
 
-	if(P_in > P_threshold){
-		count_check_err_power++;
-		LOGD("power too high, count: %d", count_check_err_power);
-		if(count_check_err_power >= MAX_CYCLE_DETECT_ERROR){
-			count_check_err_power = MAX_CYCLE_DETECT_ERROR;
-			flag_check_err |= BIT_CHECK_ERROR_POWER;
-		}
-	}else{
-		if(count_check_err_power > 1) count_check_err_power--;
-		if(count_check_err_power == 0){
-			flag_check_err &= ~BIT_CHECK_ERROR_POWER;
-			LOGI("power is safety");
+	if(P_threshold > 0){
+		if(P_in > P_threshold){
+			count_check_err_power++;
+			LOGD("power too high, count: %d", count_check_err_power);
+			if(count_check_err_power >= MAX_CYCLE_DETECT_ERROR_P){
+				count_check_err_power = MAX_CYCLE_DETECT_ERROR_P;
+				flag_check_err |= BIT_CHECK_ERROR_POWER;
+			}
+		}else{
+			if(count_check_err_power > 1) count_check_err_power--;
+			if(count_check_err_power == 0){
+				flag_check_err &= ~BIT_CHECK_ERROR_POWER;
+				LOGI("power is safety");
+			}
 		}
 	}
+
 
 	if(flag_check_err & BIT_CHECK_ERROR_POWER || flag_check_err & BIT_CHECK_ERROR_CURRENT){
 		LOGE("detect error: %02x, shut down device now", flag_check_err);
 		return ERR_DETECT_ELECTRICAL;
 	}else{
-		LOGI("device is safety");
+//		LOGD("device is safety");
 		return CODE_OK;
 	}
 	return CODE_OK;

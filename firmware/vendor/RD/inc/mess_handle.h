@@ -16,14 +16,17 @@
 #define RD_OPCODE_PRODUCT_FEATURE     0xE2
 #define RD_OPCODE_RSP_PRODUCT_FEATURE 0xE3
 
+#define RD_OPCODE_REPORT_PARAM_ELECTRICAL 0x52
+
 #define RD_HEADER_GET_TYPE          0x0001
 #define RD_HEADER_SAVE_GATEWAY      0x0002
 #define RD_HEADER_AES_AND_GET_TYPE  0x0003
 
-#define RD_HEADER_GET_PARAM               0x1752
+#define RD_HEADER_GET_PARAM               0xE405
 #define RD_HEADER_SET_THRESHOLD_CURRENT   0x0417
 #define RD_HEADER_SET_THRESHOLD_POWER     0x0517
 #define RD_HEADER_COUNTDOWN               0x070B
+#define RD_HEADER_SET_TIME_AND_NUM_DETECT 0xE505  // set time cycle read param electrical and set max num detect error
 
 typedef enum {
     TYPE_GET_VOLTAGE = 0x00,
