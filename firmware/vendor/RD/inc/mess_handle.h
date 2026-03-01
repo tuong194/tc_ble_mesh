@@ -41,5 +41,6 @@ int RD_mess_handle_opcode_E0(u8* par, int par_len, mesh_cb_fun_par_t* cb_par);
 int RD_mess_handle_opcode_E2(u8* par, int par_len, mesh_cb_fun_par_t* cb_par);
 
 int dev_rsp_param_to_gw(type_get_para type);
+void rd_register_event_secure(event_post_cb_t cb);
 
 #endif /* MESS_HANDLE_H_ */

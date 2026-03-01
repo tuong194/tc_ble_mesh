@@ -136,9 +136,9 @@ static err_code_t bl0942_get_value(uint8_t value[3], uint8_t *raw_data, uint8_t 
         }
         else
         {
-            value[0] = raw_data[0];
-            value[1] = raw_data[1];
-            value[2] = raw_data[2];
+            value[0] = raw_data[i-3];
+            value[1] = raw_data[i-2];
+            value[2] = raw_data[i-1];
             check_done = true;
             LOGV("check crc ok, index: %d", i);
             break;

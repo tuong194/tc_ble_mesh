@@ -8,6 +8,8 @@
 #include "drivers/8258/gpio.h"
 #include "../inc/rd_output.h"
 #include "../inc/utils.h"
+#include "proj_lib/sig_mesh/app_mesh.h"
+#include "../../common/system_time.h"
 
 #define ACTIVE_LEVEL_HIGH 1
 #define ACTIVE_LEVEL_LOW  0
@@ -64,7 +66,7 @@ typedef struct {
 	u32 last_time;
 }blink_led_t;
 
-static blink_led_t blink_led;
+static blink_led_t blink_led[MAX_NUM_LED];
 
 static output_t led[MAX_NUM_LED] = {
 		{
@@ -140,8 +142,101 @@ uint8_t relay_get_state(void){
 	return ON_STATE;
 }
 
-void led_blink_scan(void){
+extern uint8_t dev_get_state(void);
+static void led_mgmt_reload_data(uint8_t led_idx){
+	if(led_idx == LED_SIGNAL){
+		if(get_provision_state() == STATE_DEV_PROVED){
+			led_set_state(LED_SIGNAL, ON_STATE);
+		}else{
+			led_set_state(LED_SIGNAL, OFF_STATE);
+		}
+	}else if(led_idx == LED_ONOFF){
+		uint8_t state_onoff = dev_get_state();
+		led_set_state(LED_ONOFF, state_onoff);
+	}
+}
 
+err_code_t led_mgmt_set_blink(uint8_t led_idx, uint8_t num_cycle, uint32_t time_ms){
+	if(led_idx == 0xff){
+        for (uint8_t i = 0; i < MAX_NUM_LED; i++)
+        {
+            blink_led[i].last_time = clock_time_ms();
+			if(0xffffffff - blink_led[i].last_time <= time_ms) blink_led[i].last_time = 0;
+            blink_led[i].num_cycle = num_cycle;
+            blink_led[i].time_ms = time_ms * 1000;
+        }
+	}else{
+		if(led_idx != LED_SIGNAL || led_idx != LED_ONOFF){
+			return ERR_INVALID_ARG;
+		}
+        blink_led[led_idx].last_time = clock_time_ms();
+		if(0xffffffff - blink_led[led_idx].last_time <= time_ms) blink_led[led_idx].last_time = 0;
+        blink_led[led_idx].num_cycle = num_cycle;
+        blink_led[led_idx].time_ms = time_ms * 1000;
+	}
+	return CODE_OK;
+}
+
+void led_mgmt_blink_scan(void){
+    for (uint8_t i = 0; i < MAX_NUM_LED; i++)
+    {
+        if (blink_led[i].num_cycle > 0)
+        {
+			if(clock_time_ms() - blink_led[i].last_time >= blink_led[i].time_ms)
+            {
+                if (blink_led[i].num_cycle == 1)
+                {
+                    led_mgmt_reload_data(i);
+                    blink_led[i].num_cycle--;
+                    return;
+                }
+                if (blink_led[i].num_cycle % 2 == 0)
+                {
+                    led_set_state(i, ON_STATE); // on
+                }
+                else
+                {
+                    led_set_state(i, OFF_STATE); // off
+                }
+                blink_led[i].num_cycle--;
+                blink_led[i].last_time = clock_time_ms();
+				if(0xffffffff - blink_led[i].last_time <= blink_led[i].time_ms) blink_led[i].last_time = 0;
+            }
+        }
+    }
+}
+
+err_code_t led_mgmt_set_blink_delay(uint8_t led_idx, uint8_t num_cycle, uint32_t time_ms){
+	if(led_idx != LED_SIGNAL || led_idx != LED_ONOFF){
+		return ERR_INVALID_ARG;
+	}
+    while (num_cycle > 0)
+    {
+        if (num_cycle == 1)
+        {
+            led_mgmt_reload_data(led_idx);
+            return CODE_OK;
+        }
+        if (num_cycle > 1)
+        {
+            if (num_cycle % 2 == 0)
+            {
+                led_set_state(led_idx, ON_STATE);
+            }
+            else
+            {
+                led_set_state(led_idx, OFF_STATE);
+            }
+        }
+        num_cycle--;
+		uint8_t time = time_ms/500;
+		for(uint8_t i= 0; i< time; i++){
+			sleep_ms(500); wd_clear();
+			time_ms = time_ms/500;
+		}
+        sleep_ms(time_ms % 500);wd_clear();
+    }
+	return CODE_OK;
 }
 
 

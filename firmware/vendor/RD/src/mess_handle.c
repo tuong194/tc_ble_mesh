@@ -12,6 +12,7 @@
 #include "../inc/Define.h"
 
 static uint16_t GATEWAY_ADDR = 0x0001;
+static event_post_cb_t secure_cb;
 
 /********************** OPCODE E0 ***********************/
 static int rd_handle_save_gw(uint8_t *par, uint8_t src_adr);
@@ -24,6 +25,9 @@ static int rd_handle_set_threshold_current(uint8_t *par);
 static int rd_handle_set_countdown(uint8_t *par);
 static int rd_handle_set_time_and_num_detect(uint8_t *par);
 
+void rd_register_event_secure(event_post_cb_t cb){
+    if(cb) secure_cb = cb;
+}
 
 int RD_mess_handle_opcode_E0(u8 *par, int par_len, mesh_cb_fun_par_t *cb_par)
 {
@@ -100,6 +104,12 @@ static int rd_handle_save_gw(uint8_t *par, uint8_t src_adr)
     return mesh_tx_cmd2normal_primary(RD_OPCODE_RSP_SCAN_DEV, rsp_buf, 8, GATEWAY_ADDR, 0);
 }
 
+static secure_event_t event_secure = EVENT_SECURE_MAX;
+
+void rd_mess_post_event_bind_all(void){
+    event_secure = EVENT_SECURE_BIND_ALL;
+    if(secure_cb) secure_cb(&event_secure, NULL);    
+}
 static int rd_handle_check_secure_and_get_type(uint8_t *par, uint8_t src_adr)
 {
     if (is_provision_success()) // get_provision_state() == STATE_DEV_PROVED
@@ -116,6 +126,9 @@ static int rd_handle_check_secure_and_get_type(uint8_t *par, uint8_t src_adr)
             rsp_buf[5] = 0x00;
             rsp_buf[6] = VERSION_MAIN;
             rsp_buf[7] = VERSION_SUB;
+
+            event_secure = EVENT_SECURE_ENCRYPT_DONE;
+            if(secure_cb) secure_cb(&event_secure, NULL);
         }
         else
         {
@@ -128,6 +141,9 @@ static int rd_handle_check_secure_and_get_type(uint8_t *par, uint8_t src_adr)
             rsp_buf[5] = 0xfe;
             rsp_buf[6] = 0xff;
             rsp_buf[7] = 0xfe;
+
+            event_secure = EVENT_SECURE_ENCRYPT_FAIL;
+            if(secure_cb) secure_cb(&event_secure, NULL);
         }
         return mesh_tx_cmd2normal_primary(RD_OPCODE_RSP_SCAN_DEV, rsp_buf, 8, GATEWAY_ADDR, 0);
     }

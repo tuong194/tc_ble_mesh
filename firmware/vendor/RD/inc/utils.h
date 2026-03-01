@@ -11,6 +11,8 @@
 #include "proj/common/types.h"
 #include "proj_lib/ble/blt_config.h"
 
+typedef void (* event_post_cb_t)(void *event, void *usr_data);
+
 /************************** LOG *******************************/
 
 typedef enum {

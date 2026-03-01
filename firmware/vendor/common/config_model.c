@@ -1359,8 +1359,11 @@ u8 mesh_appkey_bind_and_share(u16 op, u16 ele_adr, u32 model_id, bool4 sig_model
 	return st;
 }
 
+extern void rd_mess_post_event_bind_all(void);
 int mesh_cmd_sig_cfg_bind(u8 *par, int par_len, mesh_cb_fun_par_t *cb_par)
 {    
+	// RD_EDIT bind all
+	rd_mess_post_event_bind_all();
     //int err = -1;
     bool4 sig_model = (sizeof(mesh_app_bind_t) - 2 == par_len);
 	LAYER_PARA_DEBUG(A_debug_mode_keybind_enter);

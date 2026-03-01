@@ -31,4 +31,8 @@ void relay_init_gpio(void);
 err_code_t relay_set_state(uint8_t state);
 uint8_t relay_get_state(void);
 
+err_code_t led_mgmt_set_blink(uint8_t led_idx, uint8_t num_cycle, uint32_t time_ms);
+err_code_t led_mgmt_set_blink_delay(uint8_t led_idx, uint8_t num_cycle, uint32_t time_ms);
+void led_mgmt_blink_scan(void);
+
 #endif /* RD_OUTPUT_H_ */

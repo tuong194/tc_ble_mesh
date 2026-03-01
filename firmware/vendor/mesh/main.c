@@ -290,6 +290,7 @@ _attribute_ram_code_ int main (void)    //must run in ramcode
 			last_time = clock_time_ms();
 		}
 		task_bl0942();
+		task_check_kick_out();
 
 	}
 }

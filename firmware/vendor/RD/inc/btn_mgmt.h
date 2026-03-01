@@ -9,6 +9,7 @@
 #define BTN_MGMT_H_
 
 #include "button.h"
+#include "utils.h"
 
 #define MAX_NUM_BUTTON 1
 
@@ -26,7 +27,7 @@
 #define BUTTON_ACTIVE_LEVEL ACTIVE_LOW
 #define BUTTON_GPIO_PIN     GPIO_PA1
 
-typedef void (* event_post_cb_t)(void *event, void *usr_data);
+
 
 typedef enum {
     EVENT_BUTTON_PRESS = 1,  // press key
