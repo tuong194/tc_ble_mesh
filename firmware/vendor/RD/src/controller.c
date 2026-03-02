@@ -164,12 +164,18 @@ static void button_event_handle(void* event, void* usr_data) {
 	{
 		LOGI("[controller] btn press");
 		uint8_t onoff = dev_get_state();
+		uint16_t dst_addr = rd_get_gateway_addr();
+		uint8_t rsp_buf[2];
 		dev_set_state(!onoff);
 
 		if(ePar.is_safe == RD_ERROR && onoff == OFF_STATE){
 			LOGW("on, set safety");
 			ePar.is_safe = RD_SAFETY;
 		}
+		rsp_buf[0] = !onoff;
+		rsp_buf[1] = 0;
+
+		mesh_tx_cmd2normal_primary(0x0482, rsp_buf, 2, dst_addr, 0);
 		break;
 	}
 	case EVENT_BUTTON_PAIR_K9B:

@@ -43,5 +43,7 @@ int RD_mess_handle_opcode_E2(u8* par, int par_len, mesh_cb_fun_par_t* cb_par);
 
 int dev_rsp_param_to_gw(type_get_para type);
 void rd_register_event_secure(event_post_cb_t cb);
+uint16_t rd_get_gateway_addr(void);
+void init_flash_gateway(void);
 
 #endif /* MESS_HANDLE_H_ */

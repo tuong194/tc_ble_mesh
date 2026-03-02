@@ -10,6 +10,7 @@
 #include "../inc/rd_err.h"
 #include "../inc/controller.h"
 #include "../inc/Define.h"
+#include "../inc/rd_flash.h"
 
 static uint16_t GATEWAY_ADDR = 0x0001;
 static event_post_cb_t secure_cb;
@@ -24,6 +25,25 @@ static int rd_handle_set_threshold_power(uint8_t *par);
 static int rd_handle_set_threshold_current(uint8_t *par);
 static int rd_handle_set_countdown(uint8_t *par);
 static int rd_handle_set_time_and_num_detect(uint8_t *par);
+
+uint16_t rd_get_gateway_addr(void){
+	return GATEWAY_ADDR;
+}
+
+void init_flash_gateway(void){
+	uint8_t gw_buff[4];
+	flash_read_page(RD_FLASH_ADDR_GATEWAY, 4, (unsigned char *)gw_buff);
+//	GATEWAY_ADDR = ((gw_buff[1] << 8) & 0xff) | gw_buff[0];
+	if(gw_buff[0] != 0x55 && gw_buff[1] != 0xAA){
+		gw_buff[0] = 0x55; gw_buff[1] = 0xAA;
+		GATEWAY_ADDR = 0x0001;
+	    gw_buff[2] = GATEWAY_ADDR & 0xff;
+	    gw_buff[3] = (GATEWAY_ADDR >> 8) & 0xff;
+	}else{
+		GATEWAY_ADDR = ((gw_buff[3] << 8) & 0xff) | gw_buff[2];
+	}
+	LOGI("GATEWAY addr: %04x", GATEWAY_ADDR);
+}
 
 void rd_register_event_secure(event_post_cb_t cb){
     if(cb) secure_cb = cb;
@@ -91,7 +111,13 @@ static int rd_handle_save_gw(uint8_t *par, uint8_t src_adr)
     {
         GATEWAY_ADDR = src_adr;
     }
-    // RD_Flash_Save_GW(GATEWAY_ADDR);
+
+    uint8_t gw_buff[4] = {0x55, 0xAA,0,0};
+    gw_buff[2] = GATEWAY_ADDR & 0xff;
+    gw_buff[3] = (GATEWAY_ADDR >> 8) & 0xff;
+
+	flash_erase_sector(RD_FLASH_ADDR_GATEWAY);
+	flash_write_page(RD_FLASH_ADDR_GATEWAY, 4, (unsigned char *)gw_buff);
 
     rsp_buf[0] = RD_HEADER_SAVE_GATEWAY & 0xff;
     rsp_buf[1] = (RD_HEADER_SAVE_GATEWAY >> 8) & 0xff;

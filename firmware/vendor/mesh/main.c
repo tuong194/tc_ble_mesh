@@ -37,6 +37,8 @@
 #include "../RD/inc/rd_output.h"
 #include "../RD/inc/controller.h"
 
+extern void init_flash_gateway(void);
+
 extern void user_init();
 extern void main_loop ();
 void blc_pm_select_none();
@@ -273,6 +275,7 @@ _attribute_ram_code_ int main (void)    //must run in ramcode
 		sleep_ms(200);
 
 		rd_init_flash_common();
+		init_flash_gateway();
 
 	}
 
