@@ -34,6 +34,7 @@
 #include "../RD/inc/bl0942.h"
 #include "../RD/inc/utils.h"
 #include "../RD/inc/button.h"
+#include "../RD/inc/rd_output.h"
 #include "../RD/inc/controller.h"
 
 extern void user_init();
@@ -271,6 +272,8 @@ _attribute_ram_code_ int main (void)    //must run in ramcode
 		LOGI("---hello, it's me---");
 		sleep_ms(200);
 
+		rd_init_flash_common();
+
 	}
 
     irq_enable();
@@ -278,7 +281,6 @@ _attribute_ram_code_ int main (void)    //must run in ramcode
     controller_init();
     bl0942_init();
     uint32_t last_time = 0;
-
 
 	while (1) {
 #if (MODULE_WATCHDOG_ENABLE)
@@ -291,7 +293,7 @@ _attribute_ram_code_ int main (void)    //must run in ramcode
 		}
 		task_bl0942();
 		task_check_kick_out();
-
+		led_mgmt_blink_scan();
 	}
 }
 #endif

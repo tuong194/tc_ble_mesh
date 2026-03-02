@@ -6,7 +6,7 @@
  */
 
 #include "../inc/mess_handle.h"
-#include "../inc/utils.h"
+//#include "../inc/utils.h"
 #include "../inc/rd_err.h"
 #include "../inc/controller.h"
 #include "../inc/Define.h"
@@ -208,7 +208,7 @@ static int rd_handle_get_param(uint8_t *par){
 static int rd_handle_set_time_and_num_detect(uint8_t *par){
 	LOGD("set time cycle read param and detect error");
 	uint8_t rsp_buf[8];
-	uint32_t time_ms = (par[2] << 24) | (par[3] << 16) + (par[4] << 8) | par[5];
+	uint32_t time_ms = (par[2] << 24) | (par[3] << 16) | (par[4] << 8) | par[5];
 	LOGD("set time cycle: %u ms, num: detect_I: %d, detect_P: %d", time_ms, par[6], par[7]);
 	dev_set_time_cycle_read_param_electrical(time_ms);
 	dev_set_max_num_detect_err_current(par[6]);

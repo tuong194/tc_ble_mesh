@@ -161,18 +161,24 @@ err_code_t led_mgmt_set_blink(uint8_t led_idx, uint8_t num_cycle, uint32_t time_
         for (uint8_t i = 0; i < MAX_NUM_LED; i++)
         {
             blink_led[i].last_time = clock_time_ms();
-			if(0xffffffff - blink_led[i].last_time <= time_ms) blink_led[i].last_time = 0;
+			if(0xffffffff - blink_led[i].last_time <= time_ms){
+				uint32_t temp_time = 0xffffffff - blink_led[i].last_time;
+				blink_led[i].last_time = time_ms - temp_time;
+			}
             blink_led[i].num_cycle = num_cycle;
-            blink_led[i].time_ms = time_ms * 1000;
+            blink_led[i].time_ms = time_ms;
         }
 	}else{
-		if(led_idx != LED_SIGNAL || led_idx != LED_ONOFF){
+		if(led_idx > MAX_NUM_LED){
 			return ERR_INVALID_ARG;
 		}
         blink_led[led_idx].last_time = clock_time_ms();
-		if(0xffffffff - blink_led[led_idx].last_time <= time_ms) blink_led[led_idx].last_time = 0;
+		if(0xffffffff - blink_led[led_idx].last_time <= time_ms){
+			uint32_t temp_time = 0xffffffff - blink_led[led_idx].last_time;
+			blink_led[led_idx].last_time = time_ms - temp_time;
+		}
         blink_led[led_idx].num_cycle = num_cycle;
-        blink_led[led_idx].time_ms = time_ms * 1000;
+        blink_led[led_idx].time_ms = time_ms;
 	}
 	return CODE_OK;
 }
@@ -200,14 +206,18 @@ void led_mgmt_blink_scan(void){
                 }
                 blink_led[i].num_cycle--;
                 blink_led[i].last_time = clock_time_ms();
-				if(0xffffffff - blink_led[i].last_time <= blink_led[i].time_ms) blink_led[i].last_time = 0;
+
+        		if(0xffffffff - blink_led[i].last_time <= blink_led[i].time_ms){
+        			uint32_t temp_time = 0xffffffff - blink_led[i].last_time;
+        			blink_led[i].last_time = blink_led[i].time_ms - temp_time;
+        		}
             }
         }
     }
 }
 
 err_code_t led_mgmt_set_blink_delay(uint8_t led_idx, uint8_t num_cycle, uint32_t time_ms){
-	if(led_idx != LED_SIGNAL || led_idx != LED_ONOFF){
+	if(led_idx > MAX_NUM_LED){
 		return ERR_INVALID_ARG;
 	}
     while (num_cycle > 0)
@@ -232,7 +242,6 @@ err_code_t led_mgmt_set_blink_delay(uint8_t led_idx, uint8_t num_cycle, uint32_t
 		uint8_t time = time_ms/500;
 		for(uint8_t i= 0; i< time; i++){
 			sleep_ms(500); wd_clear();
-			time_ms = time_ms/500;
 		}
         sleep_ms(time_ms % 500);wd_clear();
     }

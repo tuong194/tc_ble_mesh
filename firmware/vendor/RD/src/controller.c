@@ -27,6 +27,9 @@
 #define BIT_CHECK_ENCRYPT_DONE    BIT_1
 #define BIT_CHECK_ENCRYPT_FAIL    BIT_2
 
+#define TIME_OUT_BIND_ALL_SECOND  120
+#define TIME_OUT_AES_FAIL_SECOND  10
+
 struct electrical_param{
 	uint32_t U;
 	uint32_t I;
@@ -49,16 +52,10 @@ static flash_data_t flash_data;
 static struct electrical_param ePar;
 static uint8_t dev_state = OFF_STATE;
 
-// static uint32_t TIME_CYCLE_READ_MS = 10000;
-// static uint8_t MAX_CYCLE_DETECT_ERROR_I = 5;
-// static uint8_t MAX_CYCLE_DETECT_ERROR_P = 5;
-
-// static uint8_t flag_check_mess_secure = 0;
-// _Bool flag_provision = FALSE;
 int vrs_time_bind_all = 0;
 int vrs_time_aes_err = 0;
 
-
+static _Bool is_ota = false;
 
 static void aptomat_read_electrical_param(void);
 static err_code_t aptomat_check_error(uint32_t I_in, uint32_t P_in, uint32_t I_threshold, uint32_t P_threshold);
@@ -70,6 +67,38 @@ uint32_t aptomat_get_current(void) { return ePar.I; }
 uint32_t aptomat_get_power(void) { return ePar.P; }
 uint32_t aptomat_get_power_consume(void) { return ePar.P_Consume; }
 
+void rd_ota_start(void){
+	LOGI("OTA start ...");
+	is_ota = true;
+
+	vrs_time_bind_all = clock_time_s();
+	uint32_t time_temp = 0xffffffff - vrs_time_bind_all;
+	if(time_temp <= TIME_OUT_BIND_ALL_SECOND){
+		vrs_time_bind_all = TIME_OUT_BIND_ALL_SECOND - time_temp;
+	}
+}
+
+void rd_ota_end(uint8_t result){
+	is_ota = false;
+	if(result ){
+		LOGI("OTA success ...");
+	}else{
+		LOGI("OTA fail, start reboot");
+	}
+	rd_show_ota_result(result);
+
+}
+
+void rd_show_ota_result(uint8_t result){
+	if(result){
+		LOGI("OTA success, show result ...");
+		led_mgmt_set_blink_delay(LED_SIGNAL, 7, 300);
+	}else{
+		LOGI("OTA fail, show result ...");
+		led_mgmt_set_blink_delay(LED_SIGNAL, 3, 300);
+	}
+
+}
 
 void rd_dev_clear_secure(void){
 	flash_data.secure = 0;
@@ -109,13 +138,14 @@ void controller_init(void) {
 	led_init_gpio();
 	relay_init_gpio();
 	// init state default
-	dev_state = ON_STATE;
+//	dev_state = ON_STATE;
 	led_set_state(LED_ONOFF, dev_state);
-	led_set_state(LED_SIGNAL, OFF_STATE);
 	relay_set_state(dev_state);
 
 	if(get_provision_state() == STATE_DEV_PROVED){
 		led_set_state(LED_SIGNAL, ON_STATE);
+	}else{
+		led_set_state(LED_SIGNAL, OFF_STATE);
 	}
 
 	btn_mgmt_gpio_config();
@@ -131,18 +161,26 @@ static void button_event_handle(void* event, void* usr_data) {
 
 	switch (event_id) {
 	case EVENT_BUTTON_PRESS:
+	{
 		LOGI("[controller] btn press");
 		uint8_t onoff = dev_get_state();
 		dev_set_state(!onoff);
+
+		if(ePar.is_safe == RD_ERROR && onoff == OFF_STATE){
+			LOGW("on, set safety");
+			ePar.is_safe = RD_SAFETY;
+		}
 		break;
+	}
 	case EVENT_BUTTON_PAIR_K9B:
-		LOGI("[controller] btn pair k9b");
+		//LOGI("[controller] btn pair k9b");
 		break;
 	case EVENT_BUTTON_DELETE_ALL_K9B:
-		LOGI("[controller] delete all k9b");
+		//LOGI("[controller] delete all k9b");
 		break;
 	case EVENT_BUTTON_KICK_OUT:
-		LOGW("[controller] kickout");
+		LOGW("[controller] kick out");
+		led_mgmt_set_blink_delay(LED_SIGNAL, 11, 150);
 		kick_out(0);
 		break;
 	default:
@@ -159,6 +197,11 @@ void dev_set_state(uint8_t onoff) {
 
 uint8_t dev_get_state(void) {
 	return dev_state;
+}
+
+void dev_get_onoff_last(uint8_t onoff){
+	LOGI("last onoff: %d", onoff);
+	dev_state = onoff;
 }
 
 void task_bl0942(void) {
@@ -216,7 +259,7 @@ static err_code_t aptomat_check_error(uint32_t I_in, uint32_t P_in, uint32_t I_t
 			if(count_check_err_current > 1) count_check_err_current--;
 			if(count_check_err_current == 0){
 				flag_check_err &= ~BIT_CHECK_ERROR_CURRENT;
-				LOGI("current is safety");
+//				LOGI("current is safety");
 			}
 		}
 	}
@@ -233,7 +276,7 @@ static err_code_t aptomat_check_error(uint32_t I_in, uint32_t P_in, uint32_t I_t
 			if(count_check_err_power > 1) count_check_err_power--;
 			if(count_check_err_power == 0){
 				flag_check_err &= ~BIT_CHECK_ERROR_POWER;
-				LOGI("power is safety");
+//				LOGI("power is safety");
 			}
 		}
 	}
@@ -249,23 +292,27 @@ static err_code_t aptomat_check_error(uint32_t I_in, uint32_t P_in, uint32_t I_t
 	return CODE_OK;
 }
 
-
 /**********************************************************
 				      AES SECURE 
 ***********************************************************/
+
 void task_check_kick_out(void){
+#if EN_SECURE
 	uint8_t flag_check_mess_secure = get_provision_secure();
-	if(flag_check_mess_secure & BIT_CHECK_BIND_ALL){
+	if(flag_check_mess_secure & BIT_CHECK_BIND_ALL && is_ota == false){
 		if(flag_check_mess_secure & BIT_CHECK_ENCRYPT_FAIL){
-			if(clock_time_s() - vrs_time_bind_all > 10){
+			if(clock_time_s() - vrs_time_aes_err > TIME_OUT_AES_FAIL_SECOND){
+				LOGW("time out 10s, kick out");
 				kick_out(0);
 			}
 		}else if( !(flag_check_mess_secure & (BIT_CHECK_ENCRYPT_FAIL | BIT_CHECK_ENCRYPT_DONE)) ){
-			if(clock_time_s() - vrs_time_bind_all > 120){
+			if(clock_time_s() - vrs_time_bind_all > TIME_OUT_BIND_ALL_SECOND){
+				LOGW("time out 120s, kick out");
 				kick_out(0);
 			}
 		}
 	}
+#endif
 }
 
 static void check_secure_event_handle(void* event, void* usr_data){
@@ -274,10 +321,16 @@ static void check_secure_event_handle(void* event, void* usr_data){
 	{
 	case EVENT_SECURE_BIND_ALL:
 	{
+		if(flash_data.secure & BIT_CHECK_BIND_ALL) return;
+		LOGD("bind all");
 		flash_data.secure |= BIT_CHECK_BIND_ALL;
-		// blink led
 		vrs_time_bind_all = clock_time_s();
-		if(vrs_time_bind_all >= 0xfffffffe) vrs_time_bind_all = 0;
+		uint32_t time_temp = 0xffffffff - vrs_time_bind_all;
+		if(time_temp <= TIME_OUT_BIND_ALL_SECOND){
+			vrs_time_bind_all = TIME_OUT_BIND_ALL_SECOND - time_temp;
+		}
+		// blink led
+		led_mgmt_set_blink(LED_SIGNAL, 7, 300);
 		break;
 	}
 	case EVENT_SECURE_ENCRYPT_DONE:
@@ -287,7 +340,10 @@ static void check_secure_event_handle(void* event, void* usr_data){
 	{
 		flash_data.secure |= BIT_CHECK_ENCRYPT_FAIL;	
 		vrs_time_aes_err = clock_time_s();
-		if(vrs_time_aes_err >= 0xfffffffe) vrs_time_aes_err = 0;
+		uint32_t time_temp = 0xffffffff - vrs_time_aes_err;
+		if(time_temp <= TIME_OUT_AES_FAIL_SECOND){
+			vrs_time_aes_err = TIME_OUT_AES_FAIL_SECOND - time_temp;
+		}
 		break;
 	}
 	
@@ -305,10 +361,11 @@ void rd_write_flash_common(void){
 }
 
 static void rd_init_flash_common_default(void){
-	flash_data.header[0] != FLASH_HEADER_1;
-	flash_data.header[1] != FLASH_HEADER_2;
-	flash_data.header[2] != FLASH_HEADER_1;
-	flash_data.header[3] != FLASH_HEADER_2;
+	LOGW("init flash common default");
+	flash_data.header[0] = FLASH_HEADER_1;
+	flash_data.header[1] = FLASH_HEADER_2;
+	flash_data.header[2] = FLASH_HEADER_1;
+	flash_data.header[3] = FLASH_HEADER_2;
 	flash_data.secure = 0;
 	flash_data.I_threshold = I_THRESHOLD_DEFAULT; 
 	flash_data.P_threshold = P_THRESHOLD_DEFAULT;
@@ -317,7 +374,6 @@ static void rd_init_flash_common_default(void){
 	flash_data.MAX_CYCLE_DETECT_ERROR_P = MAX_CYCLE_DETECT_ERROR_P_DF;
 
 	rd_write_flash_common();
-
 }
 
 void rd_init_flash_common(void){
@@ -327,12 +383,15 @@ void rd_init_flash_common(void){
 		rd_init_flash_common_default();
 	}
 
-	//en secure
+#if EN_SECURE
 	if(get_provision_state() == STATE_DEV_PROVED){
 		uint8_t flag_check_mess_secure = get_provision_secure();
 		if(!(flag_check_mess_secure & BIT_CHECK_ENCRYPT_DONE)){
+			LOGW("check secure fail, kick out now!!");
 			kick_out(0);
 		}
 	}
+#endif
 }
+
 

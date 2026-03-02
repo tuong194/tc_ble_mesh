@@ -26,6 +26,8 @@
 #include "proj_lib/ble/blt_config.h"
 #include "app_beacon.h"
 
+#include "../RD/inc/controller.h"
+
 //FLASH_ADDRESS_EXTERN;
 
 //////////////////Factory Reset///////////////////////////////////////////////////////////////////////
@@ -605,7 +607,7 @@ void kick_out(int led_en){
 	mesh_fast_prov_val_init();
 #endif
 #else
-	// rd_dev_clear_secure(); // RD_EDIT clear flag check provision secure
+	rd_dev_clear_secure(); // RD_EDIT clear flag check provision secure
 	factory_reset();
     #if !WIN32
     if(led_en){

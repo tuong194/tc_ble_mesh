@@ -10,6 +10,7 @@
 
 #include "proj/common/types.h"
 #include "proj_lib/sig_mesh/app_mesh.h"
+#include "utils.h"
 
 #define RD_OPCODE_SCAN_DEV            0xE0
 #define RD_OPCODE_RSP_SCAN_DEV        0xE1

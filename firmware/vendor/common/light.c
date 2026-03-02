@@ -307,11 +307,12 @@ void mesh_global_var_init_light_sw()
 			p_trans->present = p_trans->target = get_on_power_up_last(p_save);
 		}
 
-		ONPOWER_UP_VAL(i) = ONPOWER_UP_SELECT;
+		ONPOWER_UP_VAL(i) = ONPOWER_UP_STORE; //ONPOWER_UP_SELECT; RD_EDIT on/off khi start
 		g_def_trans_time_val(i) = PTS_TEST_EN ? 0 : TRANSITION_TIME_DEFAULT_VAL;
 	}
 }
 
+extern void dev_get_onoff_last(uint8_t onoff);
 /**
  * @brief       This function load software resource of the light from p_save which read from flash before.
  * @return      none
@@ -324,6 +325,9 @@ void light_res_sw_load()
 			sw_level_save_t *p_save = &light_res_sw_save[i].level[k];
 			st_transition_t *p_trans = &light_res_sw[i].trans[k];
 			s16 level_poweron = 0;
+
+			dev_get_onoff_last(p_save->onoff); // RD_EDIT get onoff last
+
 			#if(WIN32)
 			if(ONPOWER_UP_STORE == ONPOWER_UP_VAL(i)){
 			#else
@@ -2144,14 +2148,19 @@ void light_ev_with_sleep(u32 count, u32 half_cycle_us)
  * @return      none
  * @note        
  */
+
+ //RD_EDIT show OTA result
+extern void rd_show_ota_result(uint8_t result);
 _USER_CAN_REDEFINE_ void show_ota_result(int result)
 {
 	if(result == OTA_REBOOT_NO_LED){
 		// nothing
 	}else if(result == OTA_SUCCESS){
-		light_ev_with_sleep(3, 1000*1000);	//0.5Hz shine for  6 second
+		//light_ev_with_sleep(3, 1000*1000);	//0.5Hz shine for  6 second
+		// rd_show_ota_result(1);
 	}else{
-		light_ev_with_sleep(30, 100*1000);	//5Hz shine for  6 second
+		// rd_show_ota_result(0);
+		// light_ev_with_sleep(30, 100*1000);	//5Hz shine for  6 second
 		//write_reg8(0x8000,result); ;while(1);  //debug which err lead to OTA fail
 	}
 	

@@ -269,6 +269,9 @@ int otaWrite(void * p)
 		if(ota_reboot_flag)
 		#endif
 		{
+			//RD_EDIT start OTA
+			rd_ota_start();
+
 			blcOta.ota_start_flag = 1;   //set flag
 			blt_ota_start_tick = clock_time()|1;  //mark time
 			if(otaStartCb){
@@ -541,10 +544,16 @@ void blt_ota_finished_flag_set(u8 reset_flag)
 void rf_link_slave_ota_finish_led_and_reboot(u8 st)
 {
 	if(OTA_SUCCESS == st){
+		// RD_EDIT OTA success 
+		rd_ota_end(1);
+
         ota_set_flag ();
     }
     else{
        if(ota_adr_index>=0){
+			// RD_EDIT OTA fail 
+			rd_ota_end(0);
+
 			irq_disable();
 
 			//for(int i=0;i<=ota_adr_index;i+=256)

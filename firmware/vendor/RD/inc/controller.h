@@ -15,6 +15,9 @@
 #define MAX_CYCLE_DETECT_ERROR_I_DF 5
 #define MAX_CYCLE_DETECT_ERROR_P_DF 5
 
+
+#define EN_SECURE   0
+
 #define RD_SAFETY   1
 #define RD_ERROR    0
 
@@ -43,8 +46,13 @@ void     dev_set_time_cycle_read_param_electrical(uint32_t time_ms);
 void 	 dev_set_max_num_detect_err_current(uint8_t num);
 void 	 dev_set_max_num_detect_err_power(uint8_t num);
 
+void rd_init_flash_common(void);
 void rd_write_flash_common(void);
 void rd_dev_clear_secure(void);
+
+void rd_ota_start(void);
+void rd_ota_end(uint8_t result);
+void rd_show_ota_result(uint8_t result);
 
 
 #endif /* CONTROLLER_H_ */
