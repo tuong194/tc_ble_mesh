@@ -9,8 +9,8 @@
 #define CONTROLLER_H_
 
  //#include "btn_mgmt.h"
-#define I_THRESHOLD_DEFAULT   100   // /100 A
-#define P_THRESHOLD_DEFAULT   50000  // /100 W
+#define I_THRESHOLD_DEFAULT   100   // /1 A
+#define P_THRESHOLD_DEFAULT   50000  // /500 W
 #define TIME_CYCLE_READ_MS_DF    10000
 #define MAX_CYCLE_DETECT_ERROR_I_DF 5
 #define MAX_CYCLE_DETECT_ERROR_P_DF 5
