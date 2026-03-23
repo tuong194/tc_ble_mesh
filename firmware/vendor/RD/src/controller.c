@@ -13,17 +13,24 @@
 #include "../inc/bl0942.h"
 #include "../inc/rd_err.h"
 #include "../inc/mess_handle.h"
-
 #include "../inc/rd_flash.h"
 
 #define BIT_0 (1 << 0)
 #define BIT_1 (1 << 1)
 #define BIT_2 (1 << 2)
+#define BIT_3 (1 << 3)
+#define BIT_4 (1 << 4)
+#define BIT_5 (1 << 5)
+#define BIT_6 (1 << 6)
+#define BIT_7 (1 << 7)
 
-#define BIT_CHECK_ERROR_POWER BIT_0
-#define BIT_CHECK_ERROR_CURRENT BIT_1
+#define BIT_CHECK_ERROR_VOL_TOO_HIGH BIT_0
+#define BIT_CHECK_ERROR_VOL_TOO_LOW  BIT_1
+#define BIT_CHECK_ERROR_CUR_TOO_HIGH BIT_2
+#define BIT_CHECK_ERROR_CUR_TOO_LOW  BIT_3
+#define BIT_CHECK_ERROR_POWER        BIT_5
 
-#define BIT_CHECK_BIND_ALL BIT_0
+#define BIT_CHECK_BIND_ALL     BIT_0
 #define BIT_CHECK_ENCRYPT_DONE BIT_1
 #define BIT_CHECK_ENCRYPT_FAIL BIT_2
 
@@ -43,9 +50,13 @@ typedef struct
 {
 	uint8_t header[4];
 	uint32_t P_threshold;
-	uint32_t I_threshold;
+	uint32_t I_threshold_high;
+	uint32_t I_threshold_low;
+	uint32_t U_threshold_high;
+	uint32_t U_threshold_low;
 	uint8_t secure;
 	uint32_t TIME_CYCLE_READ_MS;
+	uint8_t MAX_CYCLE_DETECT_ERROR_U;
 	uint8_t MAX_CYCLE_DETECT_ERROR_I;
 	uint8_t MAX_CYCLE_DETECT_ERROR_P;
 } flash_data_t;
@@ -59,8 +70,11 @@ int vrs_time_aes_err = 0;
 
 static _Bool is_ota = false;
 
+static err_code_t aptomat_check_error_voltage(uint32_t U_in, uint32_t U_threshold_low, uint32_t U_threshold_high, uint8_t MAX_NUM_DETECT, uint8_t *check_safe);
+static err_code_t aptomat_check_error_current(uint32_t I_in, uint32_t I_threshold_low, uint32_t I_threshold_high, uint8_t MAX_NUM_DETECT, uint8_t *check_safe);
+static err_code_t aptomat_check_error_power(uint32_t P_in, uint32_t P_threshold, uint8_t MAX_NUM_DETECT, uint8_t *check_safe);
+
 static void aptomat_read_electrical_param(electrical_param *par, uint32_t time_cycle_read_ms);
-static err_code_t aptomat_check_error(uint32_t I_in, uint32_t P_in, uint32_t I_threshold, uint32_t P_threshold);
 static void button_event_handle(void *event, void *usr_data);
 static void check_secure_event_handle(void *event, void *usr_data);
 
@@ -127,6 +141,12 @@ void dev_set_time_cycle_read_param_electrical(uint32_t time_ms)
 	rd_write_flash_common();
 }
 
+void dev_set_max_num_detect_err_voltage(uint8_t num)
+{
+	flash_data.MAX_CYCLE_DETECT_ERROR_U = num;
+	rd_write_flash_common();
+}
+
 void dev_set_max_num_detect_err_current(uint8_t num)
 {
 	flash_data.MAX_CYCLE_DETECT_ERROR_I = num;
@@ -144,9 +164,28 @@ void dev_set_threshold_power(uint32_t thres_val)
 	flash_data.P_threshold = thres_val;
 	rd_write_flash_common();
 }
-void dev_set_threshold_current(uint32_t thres_val)
+
+void dev_set_threshold_current_high(uint32_t thres_val)
 {
-	flash_data.I_threshold = thres_val;
+	flash_data.I_threshold_high = thres_val;
+	rd_write_flash_common();
+}
+
+void dev_set_threshold_current_low(uint32_t thres_val)
+{
+	flash_data.I_threshold_low = thres_val;
+	rd_write_flash_common();
+}
+
+void dev_set_threshold_voltage_high(uint32_t thres_val)
+{
+	flash_data.U_threshold_high = thres_val;
+	rd_write_flash_common();
+}
+
+void dev_set_threshold_voltage_low(uint32_t thres_val)
+{
+	flash_data.U_threshold_low = thres_val;
 	rd_write_flash_common();
 }
 
@@ -199,7 +238,7 @@ static void button_event_handle(void *event, void *usr_data)
 		rsp_buf[0] = !onoff;
 		rsp_buf[1] = 0;
 
-		mesh_tx_cmd2normal_primary(0x0482, rsp_buf, 2, dst_addr, 0);
+		mesh_tx_cmd2normal_primary(0x0482, rsp_buf, 2, dst_addr, 0); //generic onoff
 		break;
 	}
 	case EVENT_BUTTON_PAIR_K9B:
@@ -263,16 +302,39 @@ void task_bl0942(void)
 	{
 		is_run = false;
 		aptomat_read_electrical_param(&ePar, flash_data.TIME_CYCLE_READ_MS);
-		err_code_t ret = aptomat_check_error(ePar.I, ePar.P, flash_data.I_threshold, flash_data.P_threshold);
-		if (ret == ERR_DETECT_ELECTRICAL && ePar.is_safe == RD_SAFETY)
+
+		err_code_t err = aptomat_check_error_power(ePar.P, flash_data.P_threshold, flash_data.MAX_CYCLE_DETECT_ERROR_P, &ePar.is_safe);
+		if(err == POWER_ERR_BACK_TO_NORMAL) //normal
 		{
-			ePar.is_safe = RD_ERROR;
-			dev_set_state(OFF_STATE);
-		}
-		else if (ret == CODE_OK)
+
+		}else if(err == ERR_POWER)
 		{
-			ePar.is_safe = RD_SAFETY;
+
 		}
+
+		err = aptomat_check_error_current(ePar.I, flash_data.I_threshold_low, flash_data.I_threshold_high, flash_data.MAX_CYCLE_DETECT_ERROR_I, &ePar.is_safe);
+		if(err == CURRENT_HIGH_BACK_TO_NORMAL || CURRENT_LOW_BACK_TO_NORMAL) //normal
+		{
+
+		}else if(err == ERR_CUR_TOO_HIGH)
+		{
+
+		}else if(err == ERR_CUR_TOO_LOW)
+		{
+
+		}
+
+		err = aptomat_check_error_voltage(ePar.U, flash_data.U_threshold_low, flash_data.U_threshold_high, flash_data.MAX_CYCLE_DETECT_ERROR_U, &ePar.is_safe);
+		if(err == VOLTAGE_HIGH_BACK_TO_NORMAL || VOLTAGE_LOW_BACK_TO_NORMAL) //normal
+		{
+
+		}else if(err == ERR_VOL_TOO_HIGH)
+		{
+
+		}else if(err == ERR_VOL_TOO_LOW)
+		{
+
+		}		
 	}
 }
 
@@ -303,68 +365,131 @@ static void aptomat_read_electrical_param(electrical_param *par, uint32_t time_c
 		 par->U / 100, par->U % 100, par->I / 100, par->I % 100, par->P / 100, par->P % 100);
 }
 
-static err_code_t aptomat_check_error(uint32_t I_in, uint32_t P_in, uint32_t I_threshold, uint32_t P_threshold)
+static err_code_t aptomat_check_error_voltage(uint32_t U_in, uint32_t U_threshold_low, uint32_t U_threshold_high, uint8_t MAX_NUM_DETECT, uint8_t *check_safe){
+	static s8 count_check_vol_too_high = 0;
+	static s8 count_check_vol_too_low = 0;
+
+	if(U_threshold_high == 0 || U_threshold_high <= U_threshold_low) return ERR_INVALID_ARG;
+
+	if(U_in >= U_threshold_low && U_in <= U_threshold_high){
+		if(*check_safe & BIT_CHECK_ERROR_VOL_TOO_HIGH){
+			if(count_check_vol_too_high > 0) count_check_vol_too_high--;
+			if(count_check_vol_too_high == 0){
+				count_check_vol_too_low = 0;
+				*check_safe &= ~BIT_CHECK_ERROR_VOL_TOO_HIGH;
+				*check_safe &= ~BIT_CHECK_ERROR_VOL_TOO_LOW;
+				LOGD("voltage too high back to normal");
+				return VOLTAGE_HIGH_BACK_TO_NORMAL;
+			}
+		} 
+		if(*check_safe & BIT_CHECK_ERROR_VOL_TOO_LOW){
+			if(count_check_vol_too_low > 0) count_check_vol_too_low--;
+			if(count_check_vol_too_low == 0){
+				count_check_vol_too_high = 0;
+				*check_safe &= ~BIT_CHECK_ERROR_VOL_TOO_LOW;
+				*check_safe &= ~BIT_CHECK_ERROR_VOL_TOO_HIGH;
+				LOGD("voltage too low back to normal");
+				return VOLTAGE_LOW_BACK_TO_NORMAL;
+			}
+		}
+	}else{
+		if(U_in > U_threshold_high){
+			if(!(*check_safe & BIT_CHECK_ERROR_VOL_TOO_HIGH)){
+				if(count_check_vol_too_high < MAX_NUM_DETECT) count_check_vol_too_high++;
+				LOGD("voltage too high [%d]", count_check_vol_too_high);
+				if(count_check_vol_too_high == MAX_NUM_DETECT){
+					*check_safe |= BIT_CHECK_ERROR_VOL_TOO_HIGH;
+					return ERR_VOL_TOO_HIGH;
+				}				
+			}
+		}else if(U_in < U_threshold_low){
+			if(!(*check_safe & BIT_CHECK_ERROR_VOL_TOO_LOW)){
+				if(count_check_vol_too_low < MAX_NUM_DETECT) count_check_vol_too_low++;
+				LOGD("voltage too low [%d]", count_check_vol_too_low);
+				if(count_check_vol_too_low == MAX_NUM_DETECT){
+					*check_safe |= BIT_CHECK_ERROR_VOL_TOO_LOW;
+					return ERR_VOL_TOO_LOW;
+				}			
+			}
+		}
+	}
+	return CODE_OK;
+}
+
+static err_code_t aptomat_check_error_current(uint32_t I_in, uint32_t I_threshold_low, uint32_t I_threshold_high, uint8_t MAX_NUM_DETECT, uint8_t *check_safe){
+	static s8 count_check_cur_too_high = 0;
+	static s8 count_check_cur_too_low = 0;
+
+	if(I_threshold_high == 0 || I_threshold_high <= I_threshold_low) return ERR_INVALID_ARG;
+
+	if(I_in >= I_threshold_low && I_in <= I_threshold_high){
+		if(*check_safe & BIT_CHECK_ERROR_CUR_TOO_HIGH){
+			if(count_check_cur_too_high > 0) count_check_cur_too_high--;
+			if(count_check_cur_too_high == 0){
+				count_check_cur_too_low = 0;
+				*check_safe &= ~BIT_CHECK_ERROR_CUR_TOO_HIGH;
+				*check_safe &= ~BIT_CHECK_ERROR_CUR_TOO_LOW;
+				LOGD("current too high back to normal");
+				return CURRENT_HIGH_BACK_TO_NORMAL;
+			}
+		} 
+		if(*check_safe & BIT_CHECK_ERROR_CUR_TOO_LOW){
+			if(count_check_cur_too_low > 0) count_check_cur_too_low--;
+			if(count_check_cur_too_low == 0){
+				count_check_cur_too_high = 0;
+				*check_safe &= ~BIT_CHECK_ERROR_CUR_TOO_LOW;
+				*check_safe &= ~BIT_CHECK_ERROR_CUR_TOO_HIGH;
+				LOGD("current too low back to normal");
+				return CURRENT_LOW_BACK_TO_NORMAL;
+			}
+		}
+	}else{
+		if(I_in > I_threshold_high){
+			if(!(*check_safe & BIT_CHECK_ERROR_CUR_TOO_HIGH)){
+				if(count_check_cur_too_high < MAX_NUM_DETECT) count_check_cur_too_high++;
+				LOGD("current too high [%d]", count_check_cur_too_high);
+				if(count_check_cur_too_high == MAX_NUM_DETECT){
+					*check_safe |= BIT_CHECK_ERROR_CUR_TOO_HIGH;
+					return ERR_CUR_TOO_HIGH;
+				}				
+			}
+		}else if(I_in < I_threshold_low){
+			if(!(*check_safe & BIT_CHECK_ERROR_CUR_TOO_LOW)){
+				if(count_check_cur_too_low < MAX_NUM_DETECT) count_check_cur_too_low++;
+				LOGD("current too low [%d]", count_check_cur_too_low);
+				if(count_check_cur_too_low == MAX_NUM_DETECT){
+					*check_safe |= BIT_CHECK_ERROR_CUR_TOO_LOW;
+					return ERR_CUR_TOO_LOW;
+				}			
+			}
+		}
+	}
+	return CODE_OK;
+}
+
+static err_code_t aptomat_check_error_power(uint32_t P_in, uint32_t P_threshold, uint8_t MAX_NUM_DETECT, uint8_t *check_safe)
 {
-	static uint8_t flag_check_err = 0;
-	static s8 count_check_err_current = 0;
-	static s8 count_check_err_power = 0;
-	if (I_threshold > 0)
-	{
-		if (I_in > I_threshold)
-		{
-			if (count_check_err_current < flash_data.MAX_CYCLE_DETECT_ERROR_I)
-				count_check_err_current++;
-			LOGD("current too high [%d]", count_check_err_current);
-			if (count_check_err_current == flash_data.MAX_CYCLE_DETECT_ERROR_I)
-			{
-				flag_check_err |= BIT_CHECK_ERROR_CURRENT;
+	static s8 count_check_pow_err = 0;
+	if(P_threshold == 0) return ERR_INVALID_ARG;
+	if(P_in >= P_threshold){
+		if(*check_safe & BIT_CHECK_ERROR_POWER){
+			if(count_check_pow_err > 0) count_check_pow_err--;
+			if(count_check_pow_err == 0){
+				count_check_pow_err = 0;
+				*check_safe &= ~BIT_CHECK_ERROR_POWER;
+				LOGD("power err back to normal");
+				return POWER_ERR_BACK_TO_NORMAL;
 			}
 		}
-		else
-		{
-			if (count_check_err_current > 0)
-				count_check_err_current--;
-			if (count_check_err_current == 0)
-			{
-				flag_check_err &= ~BIT_CHECK_ERROR_CURRENT;
-				//				LOGI("current is safety");
-			}
-		}
-	}
-
-	if (P_threshold > 0)
-	{
-		if (P_in > P_threshold)
-		{
-			if (count_check_err_power < flash_data.MAX_CYCLE_DETECT_ERROR_P)
-				count_check_err_power++;
-			LOGD("power too high, count: %d", count_check_err_power);
-			if (count_check_err_power == flash_data.MAX_CYCLE_DETECT_ERROR_P)
-			{
-				flag_check_err |= BIT_CHECK_ERROR_POWER;
-			}
-		}
-		else
-		{
-			if (count_check_err_power > 0)
-				count_check_err_power--;
-			if (count_check_err_power == 0)
-			{
-				flag_check_err &= ~BIT_CHECK_ERROR_POWER;
-				//				LOGI("power is safety");
-			}
-		}
-	}
-
-	if (flag_check_err & BIT_CHECK_ERROR_POWER || flag_check_err & BIT_CHECK_ERROR_CURRENT)
-	{
-		LOGE("detect error: %02x, shut down device now", flag_check_err);
-		return ERR_DETECT_ELECTRICAL;
-	}
-	else
-	{
-		//		LOGD("device is safety");
-		return CODE_OK;
+	}else{
+		if(!(*check_safe & POWER_ERR_BACK_TO_NORMAL)){
+			if(count_check_pow_err < MAX_NUM_DETECT) count_check_pow_err++;
+			LOGD("power too high [%d]", count_check_pow_err);
+			if(count_check_pow_err == MAX_NUM_DETECT){
+				*check_safe |= POWER_ERR_BACK_TO_NORMAL;
+				return ERR_POWER;
+			}				
+		}		
 	}
 	return CODE_OK;
 }
@@ -471,7 +596,7 @@ static void rd_init_flash_common_default(void)
 	flash_data.header[2] = FLASH_HEADER_1;
 	flash_data.header[3] = FLASH_HEADER_2;
 	flash_data.secure = 0;
-	flash_data.I_threshold = I_THRESHOLD_DEFAULT;
+	flash_data.I_threshold_low = I_THRESHOLD_DEFAULT;
 	flash_data.P_threshold = P_THRESHOLD_DEFAULT;
 	flash_data.TIME_CYCLE_READ_MS = TIME_CYCLE_READ_MS_DF;
 	flash_data.MAX_CYCLE_DETECT_ERROR_I = MAX_CYCLE_DETECT_ERROR_I_DF;

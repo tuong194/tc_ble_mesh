@@ -40,11 +40,15 @@ uint32_t aptomat_get_current(void);
 uint32_t aptomat_get_power(void);
 uint32_t aptomat_get_power_consume(void);
 
-void 	 dev_set_threshold_power(uint32_t thres_val);
-void 	 dev_set_threshold_current(uint32_t thres_val);
-void     dev_set_time_cycle_read_param_electrical(uint32_t time_ms);
-void 	 dev_set_max_num_detect_err_current(uint8_t num);
-void 	 dev_set_max_num_detect_err_power(uint8_t num);
+void dev_set_threshold_voltage_high(uint32_t thres_val);
+void dev_set_threshold_voltage_low(uint32_t thres_val);
+void dev_set_threshold_current_high(uint32_t thres_val);
+void dev_set_threshold_current_low(uint32_t thres_val);
+void dev_set_threshold_power(uint32_t thres_val);
+void dev_set_time_cycle_read_param_electrical(uint32_t time_ms);
+void dev_set_max_num_detect_err_voltage(uint8_t num);
+void dev_set_max_num_detect_err_current(uint8_t num);
+void dev_set_max_num_detect_err_power(uint8_t num);
 
 void rd_init_flash_common(void);
 void rd_write_flash_common(void);
