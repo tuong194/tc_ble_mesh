@@ -26,6 +26,7 @@
 #define RD_HEADER_GET_PARAM               0xE405
 #define RD_HEADER_SET_THRESHOLD_CURRENT   0x0417
 #define RD_HEADER_SET_THRESHOLD_POWER     0x0517
+#define RD_HEADER_SET_THRESHOLD_VOLTAGE   0x0617
 #define RD_HEADER_COUNTDOWN               0x070B
 #define RD_HEADER_SET_TIME_AND_NUM_DETECT 0xE505  // set time cycle read param electrical and set max num detect error
 
@@ -41,6 +42,7 @@ typedef enum {
 int RD_mess_handle_opcode_E0(u8* par, int par_len, mesh_cb_fun_par_t* cb_par);
 int RD_mess_handle_opcode_E2(u8* par, int par_len, mesh_cb_fun_par_t* cb_par);
 
+int dev_rsp_error_code(uint8_t err_code);
 int dev_rsp_param_to_gw(type_get_para type);
 void rd_register_event_secure(event_post_cb_t cb);
 uint16_t rd_get_gateway_addr(void);

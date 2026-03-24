@@ -24,11 +24,11 @@
 #define BIT_6 (1 << 6)
 #define BIT_7 (1 << 7)
 
-#define BIT_CHECK_ERROR_VOL_TOO_HIGH BIT_0
-#define BIT_CHECK_ERROR_VOL_TOO_LOW  BIT_1
-#define BIT_CHECK_ERROR_CUR_TOO_HIGH BIT_2
-#define BIT_CHECK_ERROR_CUR_TOO_LOW  BIT_3
-#define BIT_CHECK_ERROR_POWER        BIT_5
+#define BIT_CHECK_ERROR_CUR_TOO_HIGH BIT_0
+#define BIT_CHECK_ERROR_CUR_TOO_LOW  BIT_1
+#define BIT_CHECK_ERROR_VOL_TOO_HIGH BIT_2
+#define BIT_CHECK_ERROR_VOL_TOO_LOW  BIT_3
+#define BIT_CHECK_ERROR_POWER        BIT_4
 
 #define BIT_CHECK_BIND_ALL     BIT_0
 #define BIT_CHECK_ENCRYPT_DONE BIT_1
@@ -296,38 +296,42 @@ void task_bl0942(void)
 		is_run = false;
 		aptomat_read_electrical_param(&ePar, flash_data.TIME_CYCLE_READ_MS);
 
-		err_code_t err = aptomat_check_error_power(ePar.P, flash_data.P_threshold, flash_data.MAX_CYCLE_DETECT_ERROR_P, &ePar.error);
-		if(err == POWER_ERR_BACK_TO_NORMAL) //normal
+		err_code_t err_p = aptomat_check_error_power(ePar.P, flash_data.P_threshold, flash_data.MAX_CYCLE_DETECT_ERROR_P, &ePar.error);
+		if(err_p == POWER_ERR_BACK_TO_NORMAL) //normal
 		{
 
-		}else if(err == ERR_POWER)
-		{
-
-		}
-
-		err = aptomat_check_error_current(ePar.I, flash_data.I_threshold_low, flash_data.I_threshold_high, flash_data.MAX_CYCLE_DETECT_ERROR_I, &ePar.error);
-		if(err == CURRENT_HIGH_BACK_TO_NORMAL || CURRENT_LOW_BACK_TO_NORMAL) //normal
-		{
-
-		}else if(err == ERR_CUR_TOO_HIGH)
-		{
-
-		}else if(err == ERR_CUR_TOO_LOW)
+		}else if(err_p == ERR_POWER)
 		{
 
 		}
 
-		err = aptomat_check_error_voltage(ePar.U, flash_data.U_threshold_low, flash_data.U_threshold_high, flash_data.MAX_CYCLE_DETECT_ERROR_U, &ePar.error);
-		if(err == VOLTAGE_HIGH_BACK_TO_NORMAL || VOLTAGE_LOW_BACK_TO_NORMAL) //normal
+		err_code_t err_i = aptomat_check_error_current(ePar.I, flash_data.I_threshold_low, flash_data.I_threshold_high, flash_data.MAX_CYCLE_DETECT_ERROR_I, &ePar.error);
+		if(err_i == CURRENT_HIGH_BACK_TO_NORMAL || CURRENT_LOW_BACK_TO_NORMAL) //normal
 		{
 
-		}else if(err == ERR_VOL_TOO_HIGH)
+		}else if(err_i == ERR_CUR_TOO_HIGH)
 		{
 
-		}else if(err == ERR_VOL_TOO_LOW)
+		}else if(err_i == ERR_CUR_TOO_LOW)
 		{
 
-		}		
+		}
+
+		err_code_t err_u = aptomat_check_error_voltage(ePar.U, flash_data.U_threshold_low, flash_data.U_threshold_high, flash_data.MAX_CYCLE_DETECT_ERROR_U, &ePar.error);
+		if(err_u == VOLTAGE_HIGH_BACK_TO_NORMAL || VOLTAGE_LOW_BACK_TO_NORMAL) //normal
+		{
+
+		}else if(err_u == ERR_VOL_TOO_HIGH)
+		{
+
+		}else if(err_u == ERR_VOL_TOO_LOW)
+		{
+
+		}
+
+		if(err_p != CODE_OK || err_u != CODE_OK || err_i != CODE_OK){
+			dev_rsp_error_code(ePar.error);
+		}
 	}
 }
 
