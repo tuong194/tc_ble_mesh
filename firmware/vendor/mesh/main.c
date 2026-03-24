@@ -268,15 +268,12 @@ _attribute_ram_code_ int main (void)    //must run in ramcode
 
 		// init log debug
 		rd_buffer_init();
-		soft_uart_init(GPIO_PB4, 14400);
+		soft_uart_init(GPIO_PB4, 9600);
 		log_set_level(LOG_DEBUG);
-		sleep_ms(200);
-		LOGI("---hello, it's me---");
-		sleep_ms(200);
 
+		sleep_ms(100);
 		rd_init_flash_common();
 		init_flash_gateway();
-
 	}
 
     irq_enable();

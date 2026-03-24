@@ -43,22 +43,23 @@ typedef struct
 	uint32_t I;
 	uint32_t P;
 	uint32_t P_Consume;
+	uint8_t error;
 	uint8_t is_safe;
 } electrical_param;
 
 typedef struct
 {
 	uint8_t header[4];
+	uint8_t secure;
+	uint8_t MAX_CYCLE_DETECT_ERROR_U;
+	uint8_t MAX_CYCLE_DETECT_ERROR_I;
+	uint8_t MAX_CYCLE_DETECT_ERROR_P;
+	uint32_t TIME_CYCLE_READ_MS;
 	uint32_t P_threshold;
 	uint32_t I_threshold_high;
 	uint32_t I_threshold_low;
 	uint32_t U_threshold_high;
 	uint32_t U_threshold_low;
-	uint8_t secure;
-	uint32_t TIME_CYCLE_READ_MS;
-	uint8_t MAX_CYCLE_DETECT_ERROR_U;
-	uint8_t MAX_CYCLE_DETECT_ERROR_I;
-	uint8_t MAX_CYCLE_DETECT_ERROR_P;
 } flash_data_t;
 
 static flash_data_t flash_data;
@@ -122,12 +123,6 @@ void rd_show_ota_result(uint8_t result)
 		LOGI("OTA fail, show result ...");
 		led_mgmt_set_blink_delay(LED_SIGNAL, 3, 300);
 	}
-}
-
-void rd_dev_clear_secure(void)
-{
-	flash_data.secure = 0;
-	rd_write_flash_common();
 }
 
 static inline uint8_t get_provision_secure(void)
@@ -194,8 +189,6 @@ void controller_init(void)
 	heap_init();
 	led_init_gpio();
 	relay_init_gpio();
-	// init state default
-	//	dev_state = ON_STATE;
 	led_set_state(LED_ONOFF, dev_state);
 	relay_set_state(dev_state);
 
@@ -213,6 +206,7 @@ void controller_init(void)
 	rd_register_event_secure(check_secure_event_handle);
 
 	ePar.is_safe = RD_SAFETY;
+	ePar.error = 0;
 }
 
 extern void kick_out(int led_en);
@@ -224,17 +218,15 @@ static void button_event_handle(void *event, void *usr_data)
 	{
 	case EVENT_BUTTON_PRESS:
 	{
-		LOGI("[controller] btn press");
 		uint8_t onoff = dev_get_state();
 		uint16_t dst_addr = rd_get_gateway_addr();
 		uint8_t rsp_buf[2];
+//		if (ePar.is_safe != RD_SAFETY && onoff == OFF_STATE)
+//		{
+//			LOGW("on, set safety");
+//			ePar.is_safe = RD_SAFETY;
+//		}
 		dev_set_state(!onoff);
-
-		if (ePar.is_safe == RD_ERROR && onoff == OFF_STATE)
-		{
-			LOGW("on, set safety");
-			ePar.is_safe = RD_SAFETY;
-		}
 		rsp_buf[0] = !onoff;
 		rsp_buf[1] = 0;
 
@@ -261,6 +253,7 @@ void dev_set_state(uint8_t onoff)
 {
 	if (dev_state == onoff)
 		return;
+	LOGI("set state on/off %d", onoff);
 	dev_state = onoff;
 	led_set_state(LED_ONOFF, dev_state);
 	relay_set_state(dev_state);
@@ -303,7 +296,7 @@ void task_bl0942(void)
 		is_run = false;
 		aptomat_read_electrical_param(&ePar, flash_data.TIME_CYCLE_READ_MS);
 
-		err_code_t err = aptomat_check_error_power(ePar.P, flash_data.P_threshold, flash_data.MAX_CYCLE_DETECT_ERROR_P, &ePar.is_safe);
+		err_code_t err = aptomat_check_error_power(ePar.P, flash_data.P_threshold, flash_data.MAX_CYCLE_DETECT_ERROR_P, &ePar.error);
 		if(err == POWER_ERR_BACK_TO_NORMAL) //normal
 		{
 
@@ -312,7 +305,7 @@ void task_bl0942(void)
 
 		}
 
-		err = aptomat_check_error_current(ePar.I, flash_data.I_threshold_low, flash_data.I_threshold_high, flash_data.MAX_CYCLE_DETECT_ERROR_I, &ePar.is_safe);
+		err = aptomat_check_error_current(ePar.I, flash_data.I_threshold_low, flash_data.I_threshold_high, flash_data.MAX_CYCLE_DETECT_ERROR_I, &ePar.error);
 		if(err == CURRENT_HIGH_BACK_TO_NORMAL || CURRENT_LOW_BACK_TO_NORMAL) //normal
 		{
 
@@ -324,7 +317,7 @@ void task_bl0942(void)
 
 		}
 
-		err = aptomat_check_error_voltage(ePar.U, flash_data.U_threshold_low, flash_data.U_threshold_high, flash_data.MAX_CYCLE_DETECT_ERROR_U, &ePar.is_safe);
+		err = aptomat_check_error_voltage(ePar.U, flash_data.U_threshold_low, flash_data.U_threshold_high, flash_data.MAX_CYCLE_DETECT_ERROR_U, &ePar.error);
 		if(err == VOLTAGE_HIGH_BACK_TO_NORMAL || VOLTAGE_LOW_BACK_TO_NORMAL) //normal
 		{
 
@@ -596,13 +589,21 @@ static void rd_init_flash_common_default(void)
 	flash_data.header[2] = FLASH_HEADER_1;
 	flash_data.header[3] = FLASH_HEADER_2;
 	flash_data.secure = 0;
-	flash_data.I_threshold_low = I_THRESHOLD_DEFAULT;
-	flash_data.P_threshold = P_THRESHOLD_DEFAULT;
+	flash_data.I_threshold_low = I_THRESHOLD_LOW_DF;
+	flash_data.I_threshold_high = I_THRESHOLD_HIGH_DF;
+	flash_data.U_threshold_low = U_THRESHOLD_LOW_DF;
+	flash_data.U_threshold_high = U_THRESHOLD_HIGH_DF;
+	flash_data.P_threshold = P_THRESHOLD_DF;
 	flash_data.TIME_CYCLE_READ_MS = TIME_CYCLE_READ_MS_DF;
 	flash_data.MAX_CYCLE_DETECT_ERROR_I = MAX_CYCLE_DETECT_ERROR_I_DF;
 	flash_data.MAX_CYCLE_DETECT_ERROR_P = MAX_CYCLE_DETECT_ERROR_P_DF;
-
+	flash_data.MAX_CYCLE_DETECT_ERROR_U = MAX_CYCLE_DETECT_ERROR_U_DF;
 	rd_write_flash_common();
+}
+
+void rd_dev_clear_flash_config(void)
+{
+	rd_init_flash_common_default();
 }
 
 void rd_init_flash_common(void)
@@ -613,7 +614,9 @@ void rd_init_flash_common(void)
 	{
 		rd_init_flash_common_default();
 	}
-
+	LOGI("Threshold: UH-%d, UL-%d, IH-%d, IL-%d, P-%d", flash_data.U_threshold_high, flash_data.U_threshold_low, flash_data.I_threshold_high, flash_data.I_threshold_low, flash_data.P_threshold);
+	LOGI("MAX_NUM_DETECT U-I-P: %d-%d-%d", flash_data.MAX_CYCLE_DETECT_ERROR_U, flash_data.MAX_CYCLE_DETECT_ERROR_I, flash_data.MAX_CYCLE_DETECT_ERROR_P);
+	LOGI("read param cycle (ms) %d\n", flash_data.TIME_CYCLE_READ_MS);
 #if EN_SECURE
 	if (get_provision_state() == STATE_DEV_PROVED)
 	{

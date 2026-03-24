@@ -9,17 +9,21 @@
 #define CONTROLLER_H_
 
  //#include "btn_mgmt.h"
-#define I_THRESHOLD_DEFAULT   100   // /1 A
-#define P_THRESHOLD_DEFAULT   50000  // /500 W
+#define U_THRESHOLD_LOW_DF 0
+#define U_THRESHOLD_HIGH_DF 0
+#define I_THRESHOLD_LOW_DF 0
+#define I_THRESHOLD_HIGH_DF 0
+#define P_THRESHOLD_DF 0
 #define TIME_CYCLE_READ_MS_DF    10000
-#define MAX_CYCLE_DETECT_ERROR_I_DF 5
-#define MAX_CYCLE_DETECT_ERROR_P_DF 5
+#define MAX_CYCLE_DETECT_ERROR_I_DF 3
+#define MAX_CYCLE_DETECT_ERROR_P_DF 3
+#define MAX_CYCLE_DETECT_ERROR_U_DF 3
 
 
-#define EN_SECURE   0
+#define EN_SECURE   1
 
-#define RD_SAFETY   1
-#define RD_ERROR    0
+#define RD_SAFETY   0
+#define RD_ERROR    1
 
 typedef enum{
     EVENT_SECURE_BIND_ALL = 0,
@@ -52,7 +56,7 @@ void dev_set_max_num_detect_err_power(uint8_t num);
 
 void rd_init_flash_common(void);
 void rd_write_flash_common(void);
-void rd_dev_clear_secure(void);
+void rd_dev_clear_flash_config(void);
 
 void rd_ota_start(void);
 void rd_ota_end(uint8_t result);

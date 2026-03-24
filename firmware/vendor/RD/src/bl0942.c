@@ -48,7 +48,7 @@ err_code_t bl0942_send_unlock(void)
     data_unlock[5] = CRC_check;
 
     uart_send_data(data_unlock, 6);
-    LOGI("Unlock BL0942\t");
+    LOGV("Unlock BL0942\t");
     return CODE_OK;
 }
 
@@ -66,7 +66,7 @@ err_code_t bl0942_send_setup(uint8_t REG, uint8_t *data)
     data_send[5] = CRC_Check;
 
     uart_send_data(data_send, 6);
-    LOGI("send: %02x %02x %02x %02x %02x %02x\n", data_send[0], data_send[1], data_send[2], data_send[3], data_send[4], data_send[5]);
+    LOGV("send: %02x %02x %02x %02x %02x %02x\n", data_send[0], data_send[1], data_send[2], data_send[3], data_send[4], data_send[5]);
     return CODE_OK;
 }
 
@@ -228,7 +228,7 @@ err_code_t bl0942_init(void)
         uint8_t gain_cr_read = (uint8_t)bl0942_read_data_unsigned(BL0942_REG_GAIN_CR);
         uint8_t ot_funx_read = (uint8_t)bl0942_read_data_unsigned(BL0942_REG_OT_FUNX);
 
-        LOGI("gain_cr_read: %02x, ot_funx_read: %02x\n", gain_cr_read, ot_funx_read);
+        // LOGI("gain_cr_read: %02x, ot_funx_read: %02x", gain_cr_read, ot_funx_read);
         if (gain_cr_read == Set_Gain[0] && ot_funx_read == Set_CF_ZX[0])
         {
             isBL0942Init = true;

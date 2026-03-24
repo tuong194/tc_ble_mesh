@@ -198,7 +198,7 @@ static int rd_handle_set_threshold_current(uint8_t *par)
     uint8_t rsp_buf[8];
     uint32_t threshold = ((par[2] << 8) | par[3]) * 100 + ((par[4] << 8) | par[5]);
     LOGI("set threshold current: %u/100 A", threshold);
-    dev_set_threshold_current(threshold);
+//    dev_set_threshold_current(threshold);
 
     rsp_buf[0] = RD_HEADER_SET_THRESHOLD_CURRENT & 0xff;
     rsp_buf[1] = (RD_HEADER_SET_THRESHOLD_CURRENT >> 8) & 0xff;
